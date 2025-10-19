@@ -15,6 +15,7 @@ from rich.align import Align
 # from .models import iData3min, iData5min, iData15min, iData60min, iData1Day
 from decimal import Decimal, ROUND_HALF_UP
 import psycopg2
+from psycopg2.extras import execute_values
 import config
 
 
@@ -60,13 +61,15 @@ def historicals(exchange='NFO', segment='NFO-FUT', period=1, interval='minute', 
 
     # Postgresql Storage (To be implemented)
     # store_data(resampled_data)
+    store_data_non_orm(resampled_data)
+
 
 def store_data_non_orm(resampled_data):
+    start_time = time.time()
+    console.print("\n[bold cyan]Storing data to database...[/bold cyan]")
 
     conn = psycopg2.connect(**config.DB_CONFIG)
     cursor = conn.cursor()
-
-    tables = {}
 
     for key, df in resampled_data.items():
         if df.empty:
@@ -74,15 +77,45 @@ def store_data_non_orm(resampled_data):
 
         df.reset_index(inplace=True)
 
-        for _, row in df.iterrows():
-            cursor.execute(
-                f"INSERT INTO {key} (date, symbol, open, high, low, close, volume) VALUES (%s, %s, %s, %s, %s, %s, %s) ON CONFLICT (date, symbol) DO UPDATE SET open = EXCLUDED.open, high = EXCLUDED.high, low = EXCLUDED.low, close = EXCLUDED.close, volume = EXCLUDED.volume",
-                (row['date'], row['symbol'], row['open'], row['high'], row['low'], row['close'], row['volume'])
+        records = [
+            (
+                row['date'],
+                row['symbol'],
+                Decimal(str(row['open'])).quantize(
+                    Decimal('0.01'), rounding=ROUND_HALF_UP),
+                Decimal(str(row['high'])).quantize(
+                    Decimal('0.01'), rounding=ROUND_HALF_UP),
+                Decimal(str(row['low'])).quantize(
+                    Decimal('0.01'), rounding=ROUND_HALF_UP),
+                Decimal(str(row['close'])).quantize(
+                    Decimal('0.01'), rounding=ROUND_HALF_UP),
+                int(row['volume'])
             )
+            for _, row in df.iterrows()
+        ]
 
-    conn.commit()
+        query = f"""
+            INSERT INTO {key} (date, symbol, open, high, low, close, volume)
+            VALUES %s
+            ON CONFLICT (date, symbol) DO UPDATE SET
+                open   = EXCLUDED.open,
+                high   = EXCLUDED.high,
+                low    = EXCLUDED.low,
+                close  = EXCLUDED.close,
+                volume = EXCLUDED.volume
+        """
+
+        try:
+            execute_values(cursor, query, records, page_size=1000)
+            conn.commit()
+        except Exception as e:
+            console.print(f"[red]Error inserting data into {key}: {e}[/red]")
+
     cursor.close()
     conn.close()
+    end_time = time.time()
+    console.print(
+        f"[green]Data storage completed in {end_time - start_time:.2f}s[/green]")
 
 
 # def store_data(resampled_data):
@@ -164,11 +197,11 @@ def resample_data(complete_data: pd.DataFrame, interval: str):
             '1d', on='date').agg(sampling).dropna()
 
         resampled_data = {
-            "iData3min": data3.reset_index(),
-            "iData5min": data5.reset_index(),
-            "iData15min": data15.reset_index(),
-            "iData60min": data60.reset_index(),
-            "iData1day": data1d.reset_index(),
+            "idata_3min": data3.reset_index(),
+            "idata_5min": data5.reset_index(),
+            "idata_15min": data15.reset_index(),
+            "idata_60min": data60.reset_index(),
+            "idata_1day": data1d.reset_index(),
         }
 
         resample_time = time.time() - resampling_start
