@@ -12,7 +12,7 @@ from rich import box
 from rich.progress import Progress
 import requests
 from rich.align import Align
-from .models import iData3min, iData5min, iData15min, iData60min, iData1Day
+# from .models import iData3min, iData5min, iData15min, iData60min, iData1Day
 from decimal import Decimal, ROUND_HALF_UP
 
 
@@ -57,60 +57,60 @@ def historicals(exchange='NFO', segment='NFO-FUT', period=1, interval='minute', 
     resampled_data = resample_data(complete_data, interval)
 
     # Postgresql Storage (To be implemented)
-    store_data(resampled_data)
+    # store_data(resampled_data)
 
 
-def store_data(resampled_data):
-    # create or update records in the database
-    start_time = time.time()
-    console.print("\n[bold cyan]Storing data to database...[/bold cyan]")
-    for key, df in resampled_data.items():
-        if df.empty:
-            continue
+# def store_data(resampled_data):
+#     # create or update records in the database
+#     start_time = time.time()
+#     console.print("\n[bold cyan]Storing data to database...[/bold cyan]")
+#     for key, df in resampled_data.items():
+#         if df.empty:
+#             continue
 
-        df.reset_index(inplace=True)
+#         df.reset_index(inplace=True)
 
-        model_map = {
-            "iData3min": iData3min,
-            "iData5min": iData5min,
-            "iData15min": iData15min,
-            "iData60min": iData60min,
-            "iData1day": iData1Day,
-        }
+#         model_map = {
+#             "iData3min": iData3min,
+#             "iData5min": iData5min,
+#             "iData15min": iData15min,
+#             "iData60min": iData60min,
+#             "iData1day": iData1Day,
+#         }
 
-        model = model_map.get(key)
-        if not model:
-            continue
+#         model = model_map.get(key)
+#         if not model:
+#             continue
 
-        # Convert DataFrame to model objects
-        objects = [
-            model(
-                date=row['date'],
-                symbol=row['symbol'],
-                open=Decimal(str(row['open'])).quantize(
-                    Decimal('0.01'), rounding=ROUND_HALF_UP),
-                high=Decimal(str(row['high'])).quantize(
-                    Decimal('0.01'), rounding=ROUND_HALF_UP),
-                low=Decimal(str(row['low'])).quantize(
-                    Decimal('0.01'), rounding=ROUND_HALF_UP),
-                close=Decimal(str(row['close'])).quantize(
-                    Decimal('0.01'), rounding=ROUND_HALF_UP),
-                volume=row['volume']
-            )
-            for _, row in df.iterrows()
-        ]
+#         # Convert DataFrame to model objects
+#         objects = [
+#             model(
+#                 date=row['date'],
+#                 symbol=row['symbol'],
+#                 open=Decimal(str(row['open'])).quantize(
+#                     Decimal('0.01'), rounding=ROUND_HALF_UP),
+#                 high=Decimal(str(row['high'])).quantize(
+#                     Decimal('0.01'), rounding=ROUND_HALF_UP),
+#                 low=Decimal(str(row['low'])).quantize(
+#                     Decimal('0.01'), rounding=ROUND_HALF_UP),
+#                 close=Decimal(str(row['close'])).quantize(
+#                     Decimal('0.01'), rounding=ROUND_HALF_UP),
+#                 volume=row['volume']
+#             )
+#             for _, row in df.iterrows()
+#         ]
 
-        # Use a transaction for safety and speed
-        with transaction.atomic():
-            model.objects.bulk_create(
-                objects,
-                update_conflicts=True,  # Available in Django 4.1+
-                update_fields=['open', 'high', 'low', 'close', 'volume'],
-                unique_fields=['date', 'symbol']
-            )
-    end_time = time.time()
-    console.print(
-        f"[green]Data storage completed in {end_time - start_time:.2f}s[/green]")
+#         # Use a transaction for safety and speed
+#         with transaction.atomic():
+#             model.objects.bulk_create(
+#                 objects,
+#                 update_conflicts=True,  # Available in Django 4.1+
+#                 update_fields=['open', 'high', 'low', 'close', 'volume'],
+#                 unique_fields=['date', 'symbol']
+#             )
+#     end_time = time.time()
+#     console.print(
+#         f"[green]Data storage completed in {end_time - start_time:.2f}s[/green]")
 
 
 def resample_data(complete_data: pd.DataFrame, interval: str):
