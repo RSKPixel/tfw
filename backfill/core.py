@@ -14,6 +14,8 @@ import requests
 from rich.align import Align
 # from .models import iData3min, iData5min, iData15min, iData60min, iData1Day
 from decimal import Decimal, ROUND_HALF_UP
+import psycopg2
+import config
 
 
 console = Console()
@@ -58,6 +60,29 @@ def historicals(exchange='NFO', segment='NFO-FUT', period=1, interval='minute', 
 
     # Postgresql Storage (To be implemented)
     # store_data(resampled_data)
+
+def store_data_non_orm(resampled_data):
+
+    conn = psycopg2.connect(**config.DB_CONFIG)
+    cursor = conn.cursor()
+
+    tables = {}
+
+    for key, df in resampled_data.items():
+        if df.empty:
+            continue
+
+        df.reset_index(inplace=True)
+
+        for _, row in df.iterrows():
+            cursor.execute(
+                f"INSERT INTO {key} (date, symbol, open, high, low, close, volume) VALUES (%s, %s, %s, %s, %s, %s, %s) ON CONFLICT (date, symbol) DO UPDATE SET open = EXCLUDED.open, high = EXCLUDED.high, low = EXCLUDED.low, close = EXCLUDED.close, volume = EXCLUDED.volume",
+                (row['date'], row['symbol'], row['open'], row['high'], row['low'], row['close'], row['volume'])
+            )
+
+    conn.commit()
+    cursor.close()
+    conn.close()
 
 
 # def store_data(resampled_data):
