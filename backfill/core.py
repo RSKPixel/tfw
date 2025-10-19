@@ -1,6 +1,4 @@
-from django.shortcuts import render
-from django.utils import timezone
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import pandas as pd
 import os
 import time
@@ -15,7 +13,6 @@ from rich.progress import Progress
 import requests
 from rich.align import Align
 from .models import iData3min, iData5min, iData15min, iData60min, iData1Day
-from django.db import transaction
 from decimal import Decimal, ROUND_HALF_UP
 
 

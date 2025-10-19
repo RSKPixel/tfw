@@ -1,24 +1,16 @@
 import os
 import sys
-import django
 from kiteconnect import KiteConnect
 from kiteconnect.exceptions import TokenException
 import config
 import time
 from datetime import datetime
 import requests
-from dotenv import load_dotenv
 import webbrowser
-load_dotenv()
+from core import historicals
 
 
 def main():
-    BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    sys.path.append(BASE_DIR)
-    os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'core.settings')
-    django.setup()
-
-    from data.views import historicals
 
     api_key = config.KITE_API_KEY
     api_secret = config.KITE_API_SECRET
