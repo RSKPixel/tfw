@@ -14,7 +14,7 @@ def main():
 
     api_key = config.KITE_API_KEY
     api_secret = config.KITE_API_SECRET
-    access_token_api_url = os.getenv("ACCESS_TOKEN_API_URL")
+    access_token_api_url = config.ACCESS_TOKEN_API_URL
 
     request = requests.get(access_token_api_url)
     access_token = request.json().get("access_token", "")
