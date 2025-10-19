@@ -106,7 +106,7 @@ def store_data_non_orm(resampled_data):
         """
 
         try:
-            execute_values(cursor, query, records, page_size=1000)
+            execute_values(cursor, query, records, page_size=10000)
             conn.commit()
         except Exception as e:
             console.print(f"[red]Error inserting data into {key}: {e}[/red]")
