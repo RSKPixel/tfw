@@ -48,7 +48,7 @@ def main():
             if period > 31:
                 print("Invalid input. Defaulting to 31 days.")
                 period = 31
-            if period < 1:
+            if period < 0:
                 print("Invalid input. Defaulting to 1 day.")
                 period = 1
 
