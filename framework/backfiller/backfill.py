@@ -2,7 +2,7 @@ import os
 import sys
 from kiteconnect import KiteConnect
 from kiteconnect.exceptions import TokenException
-import config
+from framework import config
 import time
 from datetime import datetime
 import requests

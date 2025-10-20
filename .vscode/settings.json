@@ -35,5 +35,7 @@
     "editor.wordBasedSuggestions": "off",
     "editor.defaultFormatter": "ms-python.autopep8",
     "editor.wordWrapColumn": 100
-  }
+  },
+  "python.analysis.extraPaths": ["./"],
+  "python.testing.cwd": "${workspaceFolder}"
 }

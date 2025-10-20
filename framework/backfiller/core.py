@@ -12,11 +12,11 @@ from rich import box
 from rich.progress import Progress
 import requests
 from rich.align import Align
-# from .models import iData3min, iData5min, iData15min, iData60min, iData1Day
 from decimal import Decimal, ROUND_HALF_UP
 import psycopg2
 from psycopg2.extras import execute_values
-import config
+
+from framework import config
 
 
 console = Console()
