@@ -2,12 +2,13 @@ import os
 import sys
 from kiteconnect import KiteConnect
 from kiteconnect.exceptions import TokenException
-from framework import config
+import config
 import time
 from datetime import datetime
 import requests
 import webbrowser
-from core import historicals
+from backfiller.core import historicals
+import psycopg2
 
 
 def main():
@@ -15,6 +16,7 @@ def main():
     api_key = config.KITE_API_KEY
     api_secret = config.KITE_API_SECRET
     access_token_api_url = config.ACCESS_TOKEN_API_URL
+    conn = psycopg2.connect(**config.DB_CONFIG)
 
     request = requests.get(access_token_api_url)
     access_token = request.json().get("access_token", "")
@@ -56,7 +58,8 @@ def main():
         else:
             period = 1
 
-        historicals(exchange='nfo', period=period, interval='minute', api=kite)
+        historicals(exchange='nfo', period=period,
+                    interval='minute', api=kite, conn=conn)
 
         if not check_market_hours():
             break
