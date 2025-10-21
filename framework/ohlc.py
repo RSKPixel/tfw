@@ -4,7 +4,7 @@ import json
 import psycopg2
 from datetime import datetime, timedelta
 import pandas as pd
-from framework import config
+from . import config
 import pytz
 IST = pytz.timezone("Asia/Kolkata")
 
@@ -17,8 +17,11 @@ table_name = {
 }
 
 
-def fetch_ohlc_data(symbol="All", from_date="", to_date="", timeframe="15min"):
-    conn = config.db_conn()
+def fetch_ohlc_data(symbol="All", from_date="", to_date="", timeframe="15min", conn=None):
+    if conn is None:
+        print("Database connection is not provided.")
+        return json.dumps([])
+
     cursor = conn.cursor()
     query_table = table_name.get(timeframe)
 
