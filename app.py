@@ -3,7 +3,6 @@ from framework.ohlc import fetch_ohlc_data
 import pytz
 
 app = Flask(__name__)
-IST = pytz.timezone("Asia/Kolkata")
 
 
 @app.route("/")
