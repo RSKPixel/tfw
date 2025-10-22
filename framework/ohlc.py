@@ -4,7 +4,6 @@ import json
 import psycopg2
 from datetime import datetime, timedelta
 import pandas as pd
-from . import config
 import pytz
 IST = pytz.timezone("Asia/Kolkata")
 
@@ -17,53 +16,47 @@ table_name = {
 }
 
 
-def fetch_ohlc_data(symbol="All", from_date="", to_date="", timeframe="15min", conn=None):
+def fetch_ohlc_data(symbol="", from_date="", to_date="", timeframe="15min", conn=None):
     if conn is None:
-        print("Database connection is not provided.")
-        return json.dumps([])
+        return {"status": "error", "error": "Database connection is not provided."}
 
-    cursor = conn.cursor()
+    if not symbol:
+        return {"status": "error", "error": "Symbol parameter is required."}
+
     query_table = table_name.get(timeframe)
-
     if not query_table:
-        raise ValueError("Invalid timeframe specified.")
+        return {"status": "error", "error": "Invalid timeframe specified."}
 
-    if from_date == "":
+    if not from_date:
         from_date = (datetime.now() - timedelta(days=7)).strftime("%Y-%m-%d")
-    if to_date == "":
+    if not to_date:
         to_date = datetime.now().strftime("%Y-%m-%d")
 
-    if symbol == "All":
-        query = f"""
-            SELECT *
-            FROM {query_table}
-            WHERE date BETWEEN %s AND %s
-            ORDER BY date DESC;
-        """
-        parms = (from_date, to_date)
-    else:
-        query = f"""
-            SELECT *
-            FROM {query_table}
-            WHERE symbol = %s AND date BETWEEN %s AND %s
-            ORDER BY date DESC;
-        """
-        parms = (symbol, from_date, to_date)
+    query = f"""
+        SELECT date AT TIME ZONE 'Asia/Kolkata' AS local_time, *
+        FROM {query_table}
+        WHERE symbol = %s AND date BETWEEN %s AND %s
+        ORDER BY date DESC;
+    """
+    params = (symbol, from_date, to_date)
 
-    cursor.execute(query, parms)
-    rows = cursor.fetchall()
-    columns = [desc[0] for desc in cursor.description]
-    df = pd.DataFrame(rows, columns=columns)
-    df["date"] = df["date"].dt.tz_convert(IST)
-    df['symbol'] = symbol
-    return df.to_json(orient='records', date_format='iso')
+    try:
+        cursor = conn.cursor()
+        cursor.execute(query, params)
+        rows = cursor.fetchall()
+        columns = [desc[0] for desc in cursor.description]
 
+        if not rows:
+            return []  # ✅ return list, not json string
 
-if __name__ == "__main__":
-    symbol = "NIFTY-I"
-    from_date = "2025-10-01"
-    to_date = "2025-10-10"
-    timeframe = "15min"
-    ohlc_json = fetch_ohlc_data(symbol, from_date, to_date, timeframe)
-    ohlc_json = json.dumps(json.loads(ohlc_json), indent=2)
-    print(ohlc_json)
+        df = pd.DataFrame(rows, columns=columns)
+        df['date'] = df["local_time"]
+        df.drop(columns=["local_time", "id"], inplace=True)
+
+        return json.loads(df.to_json(orient="records", date_format="iso"))
+    except Exception as e:
+        return {"status": "error", "error": str(e)}
+
+    finally:
+        if cursor:
+            cursor.close()
