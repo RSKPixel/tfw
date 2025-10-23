@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import CandleChart from "./components/CandleChart";
+import Basetemplate from "./template/Basetemplate";
 
 function App() {
   const [data, setData] = useState([]);
@@ -13,12 +14,7 @@ function App() {
       .catch((err) => console.error("Error fetching data:", err));
   }, []);
 
-  return (
-    <div>
-      <h2>NIFTY-I Candlestick Chart</h2>
-      <CandleChart data={data} />
-    </div>
-  );
+  return <Basetemplate></Basetemplate>;
 }
 
 export default App;
