@@ -112,8 +112,8 @@ def store_data_non_orm(resampled_data, conn):
         except Exception as e:
             console.print(f"[red]Error inserting data into {key}: {e}[/red]")
 
-    cursor.close()
-    conn.close()
+    # cursor.close()
+    # conn.close()
     end_time = time.time()
     console.print(
         f"[green]Data storage completed in {end_time - start_time:.2f}s[/green]")
