@@ -1,6 +1,6 @@
 from fastapi import FastAPI, Request, responses
-from framework.ohlc import fetch_ohlc_data
-from framework.ohlc import fetch_ta_data
+from framework.data.ohlc import fetch_ohlc_data
+from framework.data.ohlc import fetch_ta_data
 import pytz
 import config
 import uvicorn
