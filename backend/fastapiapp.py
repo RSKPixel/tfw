@@ -1,6 +1,6 @@
 from fastapi import FastAPI, Request, responses
 from framework.data.ohlc import fetch_ohlc_data
-from framework.data.ohlc import fetch_ta_data
+from framework.data.ohlc import fetch_ta_data, symbols
 import pytz
 import config
 import uvicorn
@@ -25,7 +25,7 @@ app.add_middleware(
 
 
 @app.get("/ohlc")
-async def ohlc(symbol: str = "", from_date: str = "", to_date: str = "", timeframe: str = "15min"):
+async def ohlc(symbol: str = "", from_date: str = "", to_date: str = "", timeframe: str = ""):
     params = {
         "symbol": symbol,
         "from_date": from_date,
@@ -40,7 +40,7 @@ async def ohlc(symbol: str = "", from_date: str = "", to_date: str = "", timefra
 
 
 @app.get("/ta")
-async def ta(symbol: str = "", from_date: str = "", to_date: str = "", timeframe: str = "1day"):
+async def ta(symbol: str = "", from_date: str = "", to_date: str = "", timeframe: str = ""):
 
     params = {
         "symbol": symbol,
@@ -53,6 +53,11 @@ async def ta(symbol: str = "", from_date: str = "", to_date: str = "", timeframe
     ta_data = fetch_ta_data(**params)
     return responses.JSONResponse(content=ta_data)
 
+
+@app.get("/symbols")
+async def fetch_symbols():
+    symbol_list = symbols(conn=conn)
+    return responses.JSONResponse(content=symbol_list)
 
 if __name__ == "__main__":
     uvicorn.run("fastapiapp:app", host="127.0.0.1", port=8000, reload=True)

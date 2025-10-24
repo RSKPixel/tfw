@@ -17,8 +17,28 @@ table_name = {
 }
 
 
+def symbols(conn=None):
+    if conn is None or conn.closed:
+        return {"status": "error", "error": "Database connection is not provided."}
+
+    query = "SELECT DISTINCT symbol FROM idata_1day ORDER BY symbol;"
+    try:
+        cursor = conn.cursor()
+        cursor.execute(query)
+        rows = cursor.fetchall()
+        if not rows:
+            return []
+
+        return [row[0] for row in rows]
+    except Exception as e:
+        return {"status": "error", "error": str(e)}
+    finally:
+        if cursor:
+            cursor.close()
+
+
 def fetch_ohlc_data(symbol="", from_date="", to_date="", timeframe="15min", conn=None):
-    if conn is None:
+    if conn is None or conn.closed:
         return {"status": "error", "error": "Database connection is not provided."}
 
     if not symbol:
@@ -64,7 +84,7 @@ def fetch_ohlc_data(symbol="", from_date="", to_date="", timeframe="15min", conn
 
 
 def fetch_ta_data(symbol="", from_date="", to_date="", timeframe="1day", conn=None):
-    if conn is None:
+    if conn is None or conn.closed:
         return {"status": "error", "error": "Database connection is not provided."}
 
     if not symbol:
@@ -82,10 +102,12 @@ def fetch_ta_data(symbol="", from_date="", to_date="", timeframe="1day", conn=No
     query = f"""
         SELECT date AT TIME ZONE 'Asia/Kolkata' AS local_time, *
         FROM {query_table}
-        WHERE symbol = %s AND date BETWEEN %s AND %s
+        WHERE symbol = %s AND date(date) >= %s AND date(date) <= %s
         ORDER BY date ASC;
     """
     params = (symbol, from_date, to_date)
+
+    print(params)
 
     try:
         cursor = conn.cursor()
@@ -94,7 +116,7 @@ def fetch_ta_data(symbol="", from_date="", to_date="", timeframe="1day", conn=No
         columns = [desc[0] for desc in cursor.description]
 
         if not rows:
-            return []  # ✅ return list, not json string
+            return []
 
         df = pd.DataFrame(rows, columns=columns)
         df['date'] = df["local_time"]
@@ -124,6 +146,7 @@ def fetch_ta_data(symbol="", from_date="", to_date="", timeframe="1day", conn=No
         df["bear_candle"] = df["open"] > df["close"]
 
         df.dropna(inplace=True)
+        df.to_clipboard()
         df = df.round(2)
 
         return json.loads(df.to_json(orient="records", date_format="iso"))
