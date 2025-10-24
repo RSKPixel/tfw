@@ -127,16 +127,40 @@ def fetch_ta_data(symbol="", from_date="", to_date="", timeframe="1day", conn=No
         df["ema_50"] = ta.EMA(df["close"], timeperiod=50)
         df["ema_100"] = ta.EMA(df["close"], timeperiod=100)
         df["ema_200"] = ta.EMA(df["close"], timeperiod=200)
-
         df["rsi_3"] = ta.RSI(df["close"], timeperiod=3)
         df["rsi_13"] = ta.RSI(df["close"], timeperiod=13)
 
+        df["intraday_buy"] = (
+            (df["ema_13"] > df["ema_50"]) &
+            (df["ema_50"] > df["ema_200"]) &
+            (df["rsi_3"] > 80) &
+            (df.iloc[-1]["close"] > df.iloc[-1]["open"]) &
+            (df.iloc[-2]["close"] > df.iloc[-2]["open"]) &
+            (df.iloc[-1]["close"] > df.iloc[-2]["high"])
+        )
+        df["intraday_sell"] = (
+            (df["ema_13"] < df["ema_50"]) &
+            (df["ema_50"] < df["ema_200"]) &
+            (df["rsi_3"] < 20) &
+            (df.iloc[-1]["close"] < df.iloc[-1]["open"]) &
+            (df.iloc[-2]["close"] < df.iloc[-2]["open"]) &
+            (df.iloc[-1]["close"] < df.iloc[-2]["low"])
+        )
+
+        df['sma20'] = ta.SMA(df['close'], timeperiod=20)
         df["bb_upper"] = ta.BBANDS(df["close"], timeperiod=20)[0]
         df["bb_middle"] = ta.BBANDS(df["close"], timeperiod=20)[1]
         df["bb_lower"] = ta.BBANDS(df["close"], timeperiod=20)[2]
 
-        df["atr_14"] = ta.ATR(df["high"], df["low"],
-                              df["close"], timeperiod=14)
+        df["atr_20"] = ta.ATR(df["high"], df["low"],
+                              df["close"], timeperiod=20)
+
+        df["keltner_upper"] = (df["ema_20"] + 1.5 * df["atr_20"])
+        df["keltner_lower"] = (df["ema_20"] - 1.5 * df["atr_20"])
+
+        def in_squeeze(df):
+            return df["bb_lower"] > df["keltner_lower"] and df["bb_upper"] < df["keltner_upper"]
+        df["in_squeeze"] = df.apply(in_squeeze, axis=1)
 
         df["macd"], df["macd_signal"], df["macd_hist"] = ta.MACD(
             df["close"], fastperiod=12, slowperiod=26, signalperiod=9
