@@ -1,7 +1,4 @@
-import sys
-import os
 import json
-import psycopg2
 from datetime import datetime, timedelta
 import pandas as pd
 import talib as ta

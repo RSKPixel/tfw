@@ -50,6 +50,8 @@ def scan_intraday_signal(from_date="", to_date="", timeframe="15min", conn=None)
             "conn": conn
         }
         ta_data = fetch_ta_data(**params)
+        if symbol == "NIFTY-I":
+            print(ta_data)
         if isinstance(ta_data, dict) and ta_data.get("status") == "error":
             continue
 
