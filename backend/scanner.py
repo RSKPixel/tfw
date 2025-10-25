@@ -85,7 +85,7 @@ if __name__ == "__main__":
 
     def format_signal_message(signals, title="Intraday Buy Signals"):
         if not signals:
-            return f"📊 <b>{title}</b>\nNo signals today."
+            return f"📊 <b>{title}</b>\nNo signals for now."
 
         date = signals[0]["date"]
         msg = f"📈 <b>{title}</b>\n🕒 {date}\n\n<pre>Symbol          Price\n----------------------\n"
