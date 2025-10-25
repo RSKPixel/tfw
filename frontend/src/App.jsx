@@ -15,7 +15,9 @@ function App() {
     if (!selectedSymbol) return;
 
     fetch(
-      `${api}/ta?symbol=${selectedSymbol}&from_date=2025-10-01&timeframe=${timeframe}`
+      `${api}/ta?symbol=${encodeURIComponent(
+        selectedSymbol
+      )}&from_date=2025-10-01&timeframe=${timeframe}`
     )
       .then((res) => res.json())
       .then((json) => setData(json))

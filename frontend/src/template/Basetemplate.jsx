@@ -14,15 +14,15 @@ const Basetemplate = ({
     "5min": "5m",
     "15min": "15m",
     "60min": "1hr",
-    "1d": "1d",
+    "1day": "1d",
   };
 
   useEffect(() => {
-    fetch(`${api}/symbols`)
+    fetch(`${api}/symbols?timeframe=${timeframe}`)
       .then((res) => res.json())
       .then((data) => setSymbols(data))
       .catch((err) => console.error("Error fetching symbols:", err));
-  }, []);
+  }, [api, timeframe]);
 
   const handleSelection = (event) => {
     const selectedOptions = Array.from(event.target.selectedOptions).map(
