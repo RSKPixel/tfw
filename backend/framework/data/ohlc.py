@@ -167,7 +167,6 @@ def fetch_ta_data(symbol="", from_date="", to_date="", timeframe="1day", conn=No
         df["bear_candle"] = df["open"] > df["close"]
 
         df.dropna(inplace=True)
-        df.to_clipboard()
         df = df.round(2)
 
         return json.loads(df.to_json(orient="records", date_format="iso"))
