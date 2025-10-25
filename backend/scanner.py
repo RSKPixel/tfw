@@ -3,6 +3,8 @@ import config
 import pandas as pd
 from time import time
 import requests
+from datetime import datetime
+import time
 
 
 def scan_squeeze_symbols(from_date="", to_date="", timeframe="15min", conn=None):
@@ -71,15 +73,45 @@ def scan_intraday_signal(from_date="", to_date="", timeframe="15min", conn=None)
     return intraday_buy_symbols, intraday_sell_symbols
 
 
-if __name__ == "__main__":
+def wait_until_next(waiting_minutes=1):
+    now = datetime.now()
+    next_minute = (now.minute // waiting_minutes + 1) * waiting_minutes
+    if next_minute == 60:
+        next_run = now.replace(hour=(now.hour + 1) %
+                               24, minute=0, second=1, microsecond=0)
+    else:
+        next_run = now.replace(minute=next_minute, second=1, microsecond=0)
+
+    wait_seconds = int((next_run - now).total_seconds())
+    print(f"Next run scheduled at {next_run.strftime('%H:%M:%S')}")
+
+    try:
+        while True:
+            remaining = int((next_run - datetime.now()).total_seconds())
+            if remaining <= 0:
+                break
+            mins, secs = divmod(remaining, 60)
+            print(
+                f"\r⏳ Sleeping... {mins:02d}m {secs:02d}s remaining", end="", flush=True)
+            time.sleep(1)
+    except KeyboardInterrupt:
+        print("\n⛔️ Interrupted by user.")
+        exit(0)
+
+    print("\r✅ Woke up for next run!                      ", end="\n")
+
+
+def scan():
     conn = config.db_conn()
-    starttime = time()
+    starttime = datetime.now()
+    print("Starting intraday signal scan...")
     buy_signals, sell_signals = scan_intraday_signal(
         from_date="2025-10-01", to_date="2025-10-24", timeframe="15min", conn=conn)
-    endtime = time()
-    print(f"Scan completed in {endtime - starttime:.2f} seconds.")
-    print("Symbols in intraday buy signals:", buy_signals)
-    print("Symbols in intraday sell signals:", sell_signals)
+    endtime = datetime.now()
+    print(
+        f"Scan completed in {(endtime - starttime).total_seconds():.2f} seconds.")
+    # print("Symbols in intraday buy signals:", buy_signals)
+    # print("Symbols in intraday sell signals:", sell_signals)
 
     BOT_TOKEN = "8341158966:AAGtpv713A71zMwxHkAlhI08JbElB480zIw"
     CHAT_ID = "7184769936"
@@ -104,3 +136,11 @@ if __name__ == "__main__":
                   "text": msg, "parse_mode": "HTML"})
     requests.post(url, data={"chat_id": CHAT_ID,
                   "text": sell_msg, "parse_mode": "HTML"})
+    print("Signals sent to Telegram.")
+
+
+if __name__ == "__main__":
+
+    while True:
+        scan()
+        wait_until_next(waiting_minutes=16)

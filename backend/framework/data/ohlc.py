@@ -104,8 +104,6 @@ def fetch_ta_data(symbol="", from_date="", to_date="", timeframe="1day", conn=No
     """
     params = (symbol, from_date, to_date)
 
-    print(params)
-
     try:
         cursor = conn.cursor()
         cursor.execute(query, params)
