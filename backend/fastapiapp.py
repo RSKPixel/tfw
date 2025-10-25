@@ -55,8 +55,8 @@ async def ta(symbol: str = "", from_date: str = "", to_date: str = "", timeframe
 
 
 @app.get("/symbols")
-async def fetch_symbols():
-    symbol_list = symbols(conn=conn)
+async def fetch_symbols(timeframe: str = ""):
+    symbol_list = symbols(conn=conn, timeframe=timeframe)
     return responses.JSONResponse(content=symbol_list)
 
 if __name__ == "__main__":

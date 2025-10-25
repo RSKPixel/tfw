@@ -216,6 +216,8 @@ def api_request(api, instrument_list, from_date, to_date, interval):
                     else:
                         time.sleep(0.01)  # slight delay for empty data
 
+                    if instrument['name'] == 'M&M':
+                        print(data)
                     if attempt > 0:
                         console.print(
                             f"[green]Successfully downloaded {instrument['tradingsymbol']} after {attempt} retries.[/green]")

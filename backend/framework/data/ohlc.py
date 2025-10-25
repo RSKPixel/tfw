@@ -14,11 +14,14 @@ table_name = {
 }
 
 
-def symbols(conn=None):
+def symbols(conn=None, timeframe=""):
     if conn is None or conn.closed:
         return {"status": "error", "error": "Database connection is not provided."}
 
-    query = "SELECT DISTINCT symbol FROM idata_1day ORDER BY symbol;"
+    if not timeframe:
+        timeframe = "1day"
+
+    query = f"SELECT DISTINCT symbol FROM {table_name[timeframe]} ORDER BY symbol;"
     try:
         cursor = conn.cursor()
         cursor.execute(query)
@@ -69,7 +72,7 @@ def fetch_ohlc_data(symbol="", from_date="", to_date="", timeframe="15min", conn
 
         df = pd.DataFrame(rows, columns=columns)
         df['date'] = df["local_time"]
-        df.drop(columns=["local_time", "id"], inplace=True)
+        # df.drop(columns=["local_time", "id"], inplace=True)
 
         return json.loads(df.to_json(orient="records", date_format="iso"))
     except Exception as e:
@@ -164,7 +167,7 @@ def fetch_ta_data(symbol="", from_date="", to_date="", timeframe="1day", conn=No
         df["bull_candle"] = df["close"] > df["open"]
         df["bear_candle"] = df["open"] > df["close"]
 
-        df.dropna(inplace=True)
+        # df.dropna(inplace=True)
         df = df.round(2)
 
         return json.loads(df.to_json(orient="records", date_format="iso"))

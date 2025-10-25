@@ -43,8 +43,11 @@ def scan_intraday_signal(from_date="", to_date="", timeframe="15min", conn=None)
     symbol_list = symbols(conn=conn)
     intraday_buy_symbols = []
     intraday_sell_symbols = []
-
-    for symbol in symbol_list:
+    # add progress bar
+    total_symbols = len(symbol_list)
+    for idx, symbol in enumerate(symbol_list, start=1):
+        print(
+            f"Scanning {idx}/{total_symbols} symbols...", end="\r", flush=True)
         params = {
             "symbol": symbol,
             "from_date": from_date,
@@ -105,10 +108,10 @@ def scan():
     msg = format_signal_message(buy_signals, "Intraday Buy Signals")
     sell_msg = format_signal_message(sell_signals, "Intraday Sell Signals")
     url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
-    requests.post(url, data={"chat_id": CHAT_ID,
-                  "text": msg, "parse_mode": "HTML"})
-    requests.post(url, data={"chat_id": CHAT_ID,
-                  "text": sell_msg, "parse_mode": "HTML"})
+    # requests.post(url, data={"chat_id": CHAT_ID,
+    #               "text": msg, "parse_mode": "HTML"})
+    # requests.post(url, data={"chat_id": CHAT_ID,
+    #               "text": sell_msg, "parse_mode": "HTML"})
     print("Signals sent to Telegram.")
 
 
