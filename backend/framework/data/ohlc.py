@@ -123,10 +123,10 @@ def fetch_ta_data(symbol="", from_date="", to_date="", timeframe="1day", conn=No
         df["ema_13"] = ta.EMA(df["close"], timeperiod=13)
         df["ema_20"] = ta.EMA(df["close"], timeperiod=20)
         df["ema_50"] = ta.EMA(df["close"], timeperiod=50)
-        df["ema_100"] = ta.EMA(df["close"], timeperiod=100)
         df["ema_200"] = ta.EMA(df["close"], timeperiod=200)
         df["rsi_3"] = ta.RSI(df["close"], timeperiod=3)
-        df["rsi_13"] = ta.RSI(df["close"], timeperiod=13)
+        df["atr_20"] = ta.ATR(df["high"], df["low"],
+                              df["close"], timeperiod=20)
 
         df["intraday_buy"] = (
             (df["ema_13"] > df["ema_50"]) &
@@ -150,9 +150,6 @@ def fetch_ta_data(symbol="", from_date="", to_date="", timeframe="1day", conn=No
         df["bb_middle"] = ta.BBANDS(df["close"], timeperiod=20)[1]
         df["bb_lower"] = ta.BBANDS(df["close"], timeperiod=20)[2]
 
-        df["atr_20"] = ta.ATR(df["high"], df["low"],
-                              df["close"], timeperiod=20)
-
         df["keltner_upper"] = (df["ema_20"] + 1.5 * df["atr_20"])
         df["keltner_lower"] = (df["ema_20"] - 1.5 * df["atr_20"])
 
@@ -164,10 +161,6 @@ def fetch_ta_data(symbol="", from_date="", to_date="", timeframe="1day", conn=No
             df["close"], fastperiod=12, slowperiod=26, signalperiod=9
         )
 
-        df["bull_candle"] = df["close"] > df["open"]
-        df["bear_candle"] = df["open"] > df["close"]
-
-        # df.dropna(inplace=True)
         df = df.round(2)
 
         return json.loads(df.to_json(orient="records", date_format="iso"))

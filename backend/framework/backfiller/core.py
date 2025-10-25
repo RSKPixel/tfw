@@ -206,6 +206,7 @@ def api_request(api, instrument_list, from_date, to_date, interval):
                     if len(data) != 0:
                         data = pd.DataFrame(data)
                         data['symbol'] = instrument['name'] + '-I'
+                        data["tradingsymbol"] = instrument['tradingsymbol']
                         data['open'] = data['open'].astype(float).round(2)
                         data['high'] = data['high'].astype(float).round(2)
                         data['low'] = data['low'].astype(float).round(2)
@@ -323,3 +324,27 @@ def instruments(exchange='nfo'):
     instrument_list.reset_index(drop=True, inplace=True)
 
     return instrument_list, current_expiry, previous_expiry
+
+
+def banknifty_options_chain() -> pd.DataFrame:
+    expiry_dates = pd.read_csv(os.path.join(
+        BASE_DIR, "instruments/expiries.csv"))
+    expiry_dates.sort_values(by="expiry", inplace=True)
+    expiry_dates["expiry"] = pd.to_datetime(expiry_dates["expiry"])
+
+    current_expiry = expiry_dates[expiry_dates["expiry"] >= pd.to_datetime(
+        datetime.now().date())].iloc[0]["expiry"]
+
+    instrument_list = pd.read_csv(os.path.join(
+        BASE_DIR, f"instruments/instruments-nfo.csv"))
+    instrument_list['expiry'] = pd.to_datetime(
+        instrument_list['expiry'], errors='coerce')
+    instrument_list = instrument_list[instrument_list['exchange'] == 'NFO']
+    instrument_list = instrument_list[instrument_list['segment'] == 'NFO-OPT']
+    instrument_list = instrument_list[instrument_list['name'] == 'BANKNIFTY']
+    instrument_list = instrument_list[instrument_list['expiry'] == pd.to_datetime(
+        current_expiry)]
+    instrument_list.sort_values(by="tradingsymbol", inplace=True)
+    instrument_list.reset_index(drop=True, inplace=True)
+
+    return instrument_list
