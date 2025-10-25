@@ -1,4 +1,5 @@
 from framework.data.ohlc import fetch_ta_data, symbols
+from backfill import wait_until_next, check_market_hours
 import config
 import pandas as pd
 from time import time
@@ -73,34 +74,6 @@ def scan_intraday_signal(from_date="", to_date="", timeframe="15min", conn=None)
     return intraday_buy_symbols, intraday_sell_symbols
 
 
-def wait_until_next(waiting_minutes=1):
-    now = datetime.now()
-    next_minute = (now.minute // waiting_minutes + 1) * waiting_minutes
-    if next_minute == 60:
-        next_run = now.replace(hour=(now.hour + 1) %
-                               24, minute=0, second=1, microsecond=0)
-    else:
-        next_run = now.replace(minute=next_minute, second=1, microsecond=0)
-
-    wait_seconds = int((next_run - now).total_seconds())
-    print(f"Next run scheduled at {next_run.strftime('%H:%M:%S')}")
-
-    try:
-        while True:
-            remaining = int((next_run - datetime.now()).total_seconds())
-            if remaining <= 0:
-                break
-            mins, secs = divmod(remaining, 60)
-            print(
-                f"\r⏳ Sleeping... {mins:02d}m {secs:02d}s remaining", end="", flush=True)
-            time.sleep(1)
-    except KeyboardInterrupt:
-        print("\n⛔️ Interrupted by user.")
-        exit(0)
-
-    print("\r✅ Woke up for next run!                      ", end="\n")
-
-
 def scan():
     conn = config.db_conn()
     starttime = datetime.now()
@@ -143,4 +116,7 @@ if __name__ == "__main__":
 
     while True:
         scan()
+        if not check_market_hours():
+            break
+
         wait_until_next(waiting_minutes=16)

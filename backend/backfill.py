@@ -74,6 +74,11 @@ def check_market_hours():
     current_time = now.time()
 
     # If current time is outside market hours, exit loop
+    if now.weekday() >= 5:  # 5 = Saturday, 6 = Sunday
+        print(
+            f"\n⛔ Market is closed today ({now.strftime('%A')}). Exiting loop.")
+        return False  # indicate stop condition
+
     if current_time < start_time or current_time > end_time:
         print(
             f"\n⛔ Outside market hours ({current_time.strftime('%H:%M:%S')}). Exiting loop.")
