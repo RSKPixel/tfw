@@ -1,4 +1,5 @@
 from framework.backfiller.core import banknifty_options_chain, api_request
+from backfill import wait_until_next, check_market_hours
 import config
 import requests
 import webbrowser
@@ -114,6 +115,11 @@ def scan():
         from_date=(today - pd.Timedelta(days=1)).strftime("%Y-%m-%d"),
         to_date=today.strftime("%Y-%m-%d"),
     )
+
+    if historical_data is None or historical_data.empty:
+        print("No historical data retrieved.")
+        return
+
     historical_data = historical_data.sort_values(by=["tradingsymbol", "date"])
 
     signals = pd.DataFrame()
@@ -170,4 +176,5 @@ def scan():
 if __name__ == "__main__":
     # clear console
     os.system('cls' if os.name == 'nt' else 'clear')
-    scan()
+    while check_market_hours() and wait_until_next(waiting_minutes=4):
+        scan()
