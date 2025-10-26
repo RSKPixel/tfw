@@ -20,7 +20,13 @@ const Basetemplate = ({
   useEffect(() => {
     fetch(`${api}/symbols?timeframe=${timeframe}`)
       .then((res) => res.json())
-      .then((data) => setSymbols(data))
+      .then((data) => {
+        console.log(data);
+        if (data.status === "error") {
+          return;
+        }
+        setSymbols(data.data);
+      })
       .catch((err) => console.error("Error fetching symbols:", err));
   }, [api, timeframe]);
 
@@ -69,11 +75,12 @@ const Basetemplate = ({
             onChange={handleSelection}
           >
             {/* <option value="">Select Symbol</option> */}
-            {symbols.map((symbol) => (
-              <option key={symbol} value={symbol} className="p-2">
-                {symbol}
-              </option>
-            ))}
+            {symbols &&
+              symbols.map((symbol) => (
+                <option key={symbol} value={symbol} className="p-2">
+                  {symbol}
+                </option>
+              ))}
           </select>
         </div>
 

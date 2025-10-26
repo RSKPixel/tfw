@@ -57,7 +57,7 @@ async def ta(symbol: str = "", from_date: str = "", to_date: str = "", timeframe
 @app.get("/symbols")
 async def fetch_symbols(timeframe: str = ""):
     symbol_list = symbols(conn=conn, timeframe=timeframe)
-    return responses.JSONResponse(content=symbol_list)
+    return {"status": "success", "data": symbol_list}
 
 if __name__ == "__main__":
     uvicorn.run("fastapiapp:app", host="127.0.0.1", port=8000, reload=True)
