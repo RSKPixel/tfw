@@ -35,8 +35,7 @@
     "editor.formatOnType": true,
     "editor.wordBasedSuggestions": "off",
     "editor.defaultFormatter": "ms-python.black-formatter",
-    "python.formatting.blackArgs": ["--line-length", "120"],
-    "editor.wordWrapColumn": 120
+    "editor.wordWrapColumn": 90
   },
   "python.analysis.extraPaths": ["./"],
   "python.testing.cwd": "${workspaceFolder}"

@@ -14,28 +14,8 @@ import psycopg2
 
 def main():
 
-    # api_key = config.KITE_API_KEY
-    # api_secret = config.KITE_API_SECRET
-    # access_token_api_url = config.ACCESS_TOKEN_API_URL
     conn = config.db_conn()
     kite = config.kite_connect()
-
-    # request = requests.get(access_token_api_url)
-    # access_token = request.json().get("access_token", "")
-
-    # kite = KiteConnect(api_key=api_key)
-    # try:
-    #     kite.set_access_token(access_token)
-    #     profile = kite.profile()
-    # except Exception as e:
-    #     print("Error setting access token:", e)
-    #     # open login URL in browser
-
-    #     loginurl = kite.login_url()
-    #     kite = None
-    #     print("Login URL:", loginurl)
-    #     webbrowser.open(loginurl)
-    #     return
 
     first_run = True
     period = 1
