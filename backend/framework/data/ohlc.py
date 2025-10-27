@@ -121,7 +121,6 @@ def fetch_ta_data(symbol="", from_date="", to_date="", timeframe="1day", conn=No
         df.drop(columns=["local_time", "id"], inplace=True)
 
         df["ema_13"] = ta.EMA(df["close"], timeperiod=13)
-        df["ema_20"] = ta.EMA(df["close"], timeperiod=20)
         df["ema_50"] = ta.EMA(df["close"], timeperiod=50)
         df["ema_200"] = ta.EMA(df["close"], timeperiod=200)
         df["rsi_3"] = ta.RSI(df["close"], timeperiod=3)
@@ -132,26 +131,27 @@ def fetch_ta_data(symbol="", from_date="", to_date="", timeframe="1day", conn=No
             (df["ema_13"] > df["ema_50"]) &
             (df["ema_50"] > df["ema_200"]) &
             (df["rsi_3"] > 80) &
-            (df.iloc[-1]["close"] > df.iloc[-1]["open"]) &
-            (df.iloc[-2]["close"] > df.iloc[-2]["open"]) &
-            (df.iloc[-1]["close"] > df.iloc[-2]["high"])
+            (df["close"] > df["open"]) &
+            (df["close"].shift(1) > df["open"].shift(1)) &
+            (df["close"] > df["high"].shift(1))
         )
+
         df["intraday_sell"] = (
             (df["ema_13"] < df["ema_50"]) &
             (df["ema_50"] < df["ema_200"]) &
             (df["rsi_3"] < 20) &
-            (df.iloc[-1]["close"] < df.iloc[-1]["open"]) &
-            (df.iloc[-2]["close"] < df.iloc[-2]["open"]) &
-            (df.iloc[-1]["close"] < df.iloc[-2]["low"])
+            (df["close"] < df["open"]) &
+            (df["close"].shift(1) < df["open"].shift(1)) &
+            (df["close"] < df["low"].shift(1))
         )
 
-        df['sma20'] = ta.SMA(df['close'], timeperiod=20)
+        df['sma_20'] = ta.SMA(df['close'], timeperiod=20)
         df["bb_upper"] = ta.BBANDS(df["close"], timeperiod=20)[0]
         df["bb_middle"] = ta.BBANDS(df["close"], timeperiod=20)[1]
         df["bb_lower"] = ta.BBANDS(df["close"], timeperiod=20)[2]
 
-        df["keltner_upper"] = (df["ema_20"] + 1.5 * df["atr_20"])
-        df["keltner_lower"] = (df["ema_20"] - 1.5 * df["atr_20"])
+        df["keltner_upper"] = (df["sma_20"] + 1.5 * df["atr_20"])
+        df["keltner_lower"] = (df["sma_20"] - 1.5 * df["atr_20"])
 
         def in_squeeze(df):
             return df["bb_lower"] > df["keltner_lower"] and df["bb_upper"] < df["keltner_upper"]

@@ -37,39 +37,29 @@ def kite_connect() -> KiteConnect | None:
 
 def scan():
     options_data = banknifty_options_chain()
-    kite = kite_connect()
+    kite = config.kite_connect()
     if kite is None:
         print("Kite connection could not be established.")
         return
 
     # Add NFO prefix for Kite LTP API
-    instrument_list = [
-        f"NFO:{symbol}" for symbol in options_data["tradingsymbol"]]
+    instrument_list = [f"NFO:{symbol}" for symbol in options_data["tradingsymbol"]]
     ltp_data = kite.ltp(instrument_list)
 
     # Convert LTP dict → DataFrame
     ltp_data = pd.DataFrame.from_dict(ltp_data, orient="index")
     ltp_data.reset_index(inplace=True)
-    ltp_data.rename(columns={"index": "tradingsymbol",
-                    "last_price": "ltp"}, inplace=True)
+    ltp_data.rename(columns={"index": "tradingsymbol", "last_price": "ltp"}, inplace=True)
     ltp_data["ltp"] = ltp_data["ltp"].astype(float)
 
     # Remove "NFO:" prefix to match original column
-    ltp_data["tradingsymbol"] = ltp_data["tradingsymbol"].str.replace(
-        "NFO:", "", regex=False)
+    ltp_data["tradingsymbol"] = ltp_data["tradingsymbol"].str.replace("NFO:", "", regex=False)
 
     # Merge correctly by tradingsymbol
-    options_data = pd.merge(
-        options_data,
-        ltp_data[["tradingsymbol", "ltp"]],
-        on="tradingsymbol",
-        how="inner"
-    )
+    options_data = pd.merge(options_data, ltp_data[["tradingsymbol", "ltp"]], on="tradingsymbol", how="inner")
 
     # Filter by LTP range
-    options_data = options_data[
-        (options_data["ltp"] > 70) & (options_data["ltp"] < 140)
-    ].reset_index(drop=True)
+    options_data = options_data[(options_data["ltp"] > 70) & (options_data["ltp"] < 140)].reset_index(drop=True)
 
     options_data = banknifty_options_chain()
     kite = kite_connect()
@@ -78,33 +68,23 @@ def scan():
         return
 
     # Add NFO prefix for Kite LTP API
-    instrument_list = [
-        f"NFO:{symbol}" for symbol in options_data["tradingsymbol"]]
+    instrument_list = [f"NFO:{symbol}" for symbol in options_data["tradingsymbol"]]
     ltp_data = kite.ltp(instrument_list)
 
     # Convert LTP dict → DataFrame
     ltp_data = pd.DataFrame.from_dict(ltp_data, orient="index")
     ltp_data.reset_index(inplace=True)
-    ltp_data.rename(columns={"index": "tradingsymbol",
-                    "last_price": "ltp"}, inplace=True)
+    ltp_data.rename(columns={"index": "tradingsymbol", "last_price": "ltp"}, inplace=True)
     ltp_data["ltp"] = ltp_data["ltp"].astype(float)
 
     # Remove "NFO:" prefix to match original column
-    ltp_data["tradingsymbol"] = ltp_data["tradingsymbol"].str.replace(
-        "NFO:", "", regex=False)
+    ltp_data["tradingsymbol"] = ltp_data["tradingsymbol"].str.replace("NFO:", "", regex=False)
 
     # Merge correctly by tradingsymbol
-    options_data = pd.merge(
-        options_data,
-        ltp_data[["tradingsymbol", "ltp"]],
-        on="tradingsymbol",
-        how="inner"
-    )
+    options_data = pd.merge(options_data, ltp_data[["tradingsymbol", "ltp"]], on="tradingsymbol", how="inner")
 
     # Filter by LTP range
-    options_data = options_data[
-        (options_data["ltp"] >= 70) & (options_data["ltp"] <= 140)
-    ].reset_index(drop=True)
+    options_data = options_data[(options_data["ltp"] >= 70) & (options_data["ltp"] <= 140)].reset_index(drop=True)
 
     today = datetime.now()
 
@@ -133,41 +113,60 @@ def scan():
         cond_rsi = group["rsi3"] > 50
         cond_bull1 = group["close"] > group["open"]
         cond_bull2 = cond_bull1.shift(1)
-        cond_bear3 = (group["close"].shift(2) < group["open"].shift(2))
+        cond_bear3 = group["close"].shift(2) < group["open"].shift(2)
         cond_break = group["close"] > group["high"].shift(1)
 
         # Combine conditions
-        group["signal"] = np.where(
-            cond_rsi & cond_bull1 & cond_bull2 & cond_bear3 & cond_break,
-            "BUY",
-            None
-        )
+        group["signal"] = np.where(cond_rsi & cond_bull1 & cond_bull2 & cond_bear3 & cond_break, "BUY", None)
 
         group_signals = group[group["signal"] == "BUY"].copy()
 
         if not group_signals.empty:
             group_signals["tradingsymbol"] = tradingsymbol
-            group_signals["date"] = group_signals["date"].dt.strftime(
-                "%Y-%m-%d %H:%M")
+            group_signals["date"] = group_signals["date"].dt.strftime("%Y-%m-%d %H:%M")
             group_signals["entry_price"] = group_signals["high"] + 1
             group_signals["stop_loss"] = group_signals["previous_low"] - 1
-            group_signals["risk"] = np.where(
-                group_signals["stop_loss"] > 15, "HIGH", "LOW")
-            group_signals["target_price_1"] = group_signals["high"] + \
-                ((group_signals["high"] - group_signals["previous_low"]) * 2)
-            group_signals["target_price_2"] = group_signals["high"] + \
-                ((group_signals["high"] - group_signals["previous_low"]) * 3)
+            group_signals["risk"] = np.where(group_signals["stop_loss"] > 15, "HIGH", "LOW")
+            group_signals["target_price_1"] = group_signals["high"] + (
+                (group_signals["high"] - group_signals["previous_low"]) * 2
+            )
+            group_signals["target_price_2"] = group_signals["high"] + (
+                (group_signals["high"] - group_signals["previous_low"]) * 3
+            )
 
-            group_signals[["tradingsymbol", "date", "entry_price",
-                           "stop_loss", "target_price_1", "target_price_2", "signal", "risk"]]
+            group_signals[
+                [
+                    "tradingsymbol",
+                    "date",
+                    "entry_price",
+                    "stop_loss",
+                    "target_price_1",
+                    "target_price_2",
+                    "signal",
+                    "risk",
+                ]
+            ]
             signals = pd.concat([signals, group_signals], ignore_index=True)
 
     if not signals.empty:
         signals = signals.sort_values(by=["date"]).reset_index()
 
         print("🚀 Buy Signals:")
-        print(signals.iloc[-10:][["tradingsymbol", "date", "close", "entry_price",
-                                  "stop_loss", "target_price_1", "target_price_2", "signal", "risk"]])
+        print(
+            signals.iloc[-10:][
+                [
+                    "tradingsymbol",
+                    "date",
+                    "close",
+                    "entry_price",
+                    "stop_loss",
+                    "target_price_1",
+                    "target_price_2",
+                    "signal",
+                    "risk",
+                ]
+            ]
+        )
     else:
         print("No buy signals found.")
     return None
@@ -176,5 +175,10 @@ def scan():
 if __name__ == "__main__":
     # clear console
     os.system('cls' if os.name == 'nt' else 'clear')
-    while check_market_hours() and wait_until_next(waiting_minutes=4):
+    while True:
+
         scan()
+        if not check_market_hours():
+            break
+
+        wait_until_next(waiting_minutes=4)
