@@ -56,10 +56,14 @@ def scan():
     ltp_data["tradingsymbol"] = ltp_data["tradingsymbol"].str.replace("NFO:", "", regex=False)
 
     # Merge correctly by tradingsymbol
-    options_data = pd.merge(options_data, ltp_data[["tradingsymbol", "ltp"]], on="tradingsymbol", how="inner")
+    options_data = pd.merge(
+        options_data, ltp_data[["tradingsymbol", "ltp"]], on="tradingsymbol", how="inner"
+    )
 
     # Filter by LTP range
-    options_data = options_data[(options_data["ltp"] > 70) & (options_data["ltp"] < 140)].reset_index(drop=True)
+    options_data = options_data[
+        (options_data["ltp"] > 70) & (options_data["ltp"] < 140)
+    ].reset_index(drop=True)
 
     options_data = banknifty_options_chain()
     kite = kite_connect()
@@ -81,10 +85,14 @@ def scan():
     ltp_data["tradingsymbol"] = ltp_data["tradingsymbol"].str.replace("NFO:", "", regex=False)
 
     # Merge correctly by tradingsymbol
-    options_data = pd.merge(options_data, ltp_data[["tradingsymbol", "ltp"]], on="tradingsymbol", how="inner")
+    options_data = pd.merge(
+        options_data, ltp_data[["tradingsymbol", "ltp"]], on="tradingsymbol", how="inner"
+    )
 
     # Filter by LTP range
-    options_data = options_data[(options_data["ltp"] >= 70) & (options_data["ltp"] <= 140)].reset_index(drop=True)
+    options_data = options_data[
+        (options_data["ltp"] >= 70) & (options_data["ltp"] <= 140)
+    ].reset_index(drop=True)
 
     today = datetime.now()
 
@@ -117,7 +125,9 @@ def scan():
         cond_break = group["close"] > group["high"].shift(1)
 
         # Combine conditions
-        group["signal"] = np.where(cond_rsi & cond_bull1 & cond_bull2 & cond_bear3 & cond_break, "BUY", None)
+        group["signal"] = np.where(
+            cond_rsi & cond_bull1 & cond_bull2 & cond_bear3 & cond_break, "BUY", None
+        )
 
         group_signals = group[group["signal"] == "BUY"].copy()
 
