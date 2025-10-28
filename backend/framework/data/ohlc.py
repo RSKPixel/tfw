@@ -3,6 +3,7 @@ from datetime import datetime, timedelta
 import pandas as pd
 import talib as ta
 import pytz
+
 IST = pytz.timezone("Asia/Kolkata")
 
 table_name = {
@@ -10,7 +11,7 @@ table_name = {
     "5min": "idata_5min",
     "15min": "idata_15min",
     "60min": "idata_60min",
-    "1day": "idata_1day"
+    "1day": "idata_1day",
 }
 
 
@@ -118,31 +119,46 @@ def fetch_ta_data(symbol="", from_date="", to_date="", timeframe="1day", conn=No
 
         df = pd.DataFrame(rows, columns=columns)
         df['date'] = df["local_time"]
+        df["date"] = pd.to_datetime(df["date"])
+        df.sort_values(by="date", inplace=True)
+        df[["open", "high", "low", "close", "volume"]] = df[
+            ["open", "high", "low", "close", "volume"]
+        ].astype(float)
+
         df.drop(columns=["local_time", "id"], inplace=True)
 
         df["ema_13"] = ta.EMA(df["close"], timeperiod=13)
         df["ema_50"] = ta.EMA(df["close"], timeperiod=50)
         df["ema_200"] = ta.EMA(df["close"], timeperiod=200)
         df["rsi_3"] = ta.RSI(df["close"], timeperiod=3)
-        df["atr_20"] = ta.ATR(df["high"], df["low"],
-                              df["close"], timeperiod=20)
+        df["atr_20"] = ta.ATR(df["high"], df["low"], df["close"], timeperiod=20)
+        n = 10
 
+        df["pivot_high"] = df["high"][
+            (df["high"] == df["high"].rolling(window=2 * n + 1, center=True).max())
+        ]
+        df["pivot_low"] = df["low"][
+            (df["low"] == df["low"].rolling(window=2 * n + 1, center=True).min())
+        ]
+
+        if symbol == "FEDERALBNK-I":
+            df[["date", "pivot_high", "pivot_low"]].to_clipboard()
         df["intraday_buy"] = (
-            (df["ema_13"] > df["ema_50"]) &
-            (df["ema_50"] > df["ema_200"]) &
-            (df["rsi_3"] > 80) &
-            (df["close"] > df["open"]) &
-            (df["close"].shift(1) > df["open"].shift(1)) &
-            (df["close"] > df["high"].shift(1))
+            (df["ema_13"] > df["ema_50"])
+            & (df["ema_50"] > df["ema_200"])
+            & (df["rsi_3"] > 80)
+            & (df["close"] > df["open"])
+            & (df["close"].shift(1) > df["open"].shift(1))
+            & (df["close"] > df["high"].shift(1))
         )
 
         df["intraday_sell"] = (
-            (df["ema_13"] < df["ema_50"]) &
-            (df["ema_50"] < df["ema_200"]) &
-            (df["rsi_3"] < 20) &
-            (df["close"] < df["open"]) &
-            (df["close"].shift(1) < df["open"].shift(1)) &
-            (df["close"] < df["low"].shift(1))
+            (df["ema_13"] < df["ema_50"])
+            & (df["ema_50"] < df["ema_200"])
+            & (df["rsi_3"] < 20)
+            & (df["close"] < df["open"])
+            & (df["close"].shift(1) < df["open"].shift(1))
+            & (df["close"] < df["low"].shift(1))
         )
 
         df['sma_20'] = ta.SMA(df['close'], timeperiod=20)
@@ -150,11 +166,12 @@ def fetch_ta_data(symbol="", from_date="", to_date="", timeframe="1day", conn=No
         df["bb_middle"] = ta.BBANDS(df["close"], timeperiod=20)[1]
         df["bb_lower"] = ta.BBANDS(df["close"], timeperiod=20)[2]
 
-        df["keltner_upper"] = (df["sma_20"] + 1.5 * df["atr_20"])
-        df["keltner_lower"] = (df["sma_20"] - 1.5 * df["atr_20"])
+        df["keltner_upper"] = df["sma_20"] + 1.5 * df["atr_20"]
+        df["keltner_lower"] = df["sma_20"] - 1.5 * df["atr_20"]
 
         def in_squeeze(df):
             return df["bb_lower"] > df["keltner_lower"] and df["bb_upper"] < df["keltner_upper"]
+
         df["in_squeeze"] = df.apply(in_squeeze, axis=1)
 
         df["macd"], df["macd_signal"], df["macd_hist"] = ta.MACD(
