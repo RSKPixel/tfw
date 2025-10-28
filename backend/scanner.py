@@ -69,7 +69,9 @@ def scan_intraday_signal(from_date="", to_date="", timeframe="15min", conn=None)
         pivots = df[["date", "pivot_high", "pivot_low"]]
         if symbol == "FEDERALBNK-I":
             pivots.to_clipboard(index=False)
-        df = df[pd.to_datetime(df["date"]).dt.date == datetime.now().date()]
+        dates = df["date"].unique()
+        latest_date = max(pd.to_datetime(dates)).date()
+        df = df[pd.to_datetime(df["date"]).dt.date == latest_date]
 
         for index, row in df.iterrows():
             if row["intraday_buy"]:

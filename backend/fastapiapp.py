@@ -1,6 +1,8 @@
 from fastapi import FastAPI, Request, responses
 from framework.data.ohlc import fetch_ohlc_data
 from framework.data.ohlc import fetch_ta_data, symbols
+from scanner import scan_intraday_signal
+from datetime import datetime
 import pytz
 import config
 import uvicorn
@@ -17,7 +19,7 @@ app = FastAPI()
 conn = config.db_conn()
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,          # your frontend URLs
+    allow_origins=origins,  # your frontend URLs
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -31,7 +33,7 @@ async def ohlc(symbol: str = "", from_date: str = "", to_date: str = "", timefra
         "from_date": from_date,
         "to_date": to_date,
         "timeframe": timeframe,
-        "conn": conn
+        "conn": conn,
     }
     print(params)
 
@@ -47,7 +49,7 @@ async def ta(symbol: str = "", from_date: str = "", to_date: str = "", timeframe
         "from_date": from_date,
         "to_date": to_date,
         "timeframe": timeframe,
-        "conn": conn
+        "conn": conn,
     }
 
     ta_data = fetch_ta_data(**params)
@@ -58,6 +60,16 @@ async def ta(symbol: str = "", from_date: str = "", to_date: str = "", timeframe
 async def fetch_symbols(timeframe: str = ""):
     symbol_list = symbols(conn=conn, timeframe=timeframe)
     return {"status": "success", "data": symbol_list}
+
+
+@app.get("/scanner/intraday-signals")
+async def scanner_intraday_signals():
+    conn = config.db_conn()
+    buy_signals, sell_signals = scan_intraday_signal(
+        from_date="2025-10-01", to_date="2025-10-31", timeframe="15min", conn=conn
+    )
+    return {"status": "success", "buy_signals": buy_signals, "sell_signals": sell_signals}
+
 
 if __name__ == "__main__":
     uvicorn.run("fastapiapp:app", host="127.0.0.1", port=8000, reload=True)
