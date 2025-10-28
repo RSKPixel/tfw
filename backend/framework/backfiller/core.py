@@ -24,7 +24,9 @@ console = Console()
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 
-def historicals(exchange='NFO', segment='NFO-FUT', period=1, interval='minute', api=None, conn=None):
+def historicals(
+    exchange='NFO', segment='NFO-FUT', period=1, interval='minute', api=None, conn=None
+):
 
     if not api:
         console.print("[bold red]Kite connection failed[/bold red]")
@@ -47,16 +49,24 @@ def historicals(exchange='NFO', segment='NFO-FUT', period=1, interval='minute', 
     to_date = datetime.now().date()
 
     # Print initial info
-    print_info(exchange, segment, instrument_list, interval,
-               current_expiry, previous_expiry, from_date, to_date, no_of_days=delta+1, profile=api.profile())
+    print_info(
+        exchange,
+        segment,
+        instrument_list,
+        interval,
+        current_expiry,
+        previous_expiry,
+        from_date,
+        to_date,
+        no_of_days=delta + 1,
+        profile=api.profile(),
+    )
 
     # Fetch historical data using Kite API
-    complete_data = api_request(
-        api, instrument_list, from_date, to_date, interval)
+    complete_data = api_request(api, instrument_list, from_date, to_date, interval)
 
     if complete_data is None or complete_data.empty:
-        console.print(
-            "[bold red]No data fetched from API for the given range[/bold red]")
+        console.print("[bold red]No data fetched from API for the given range[/bold red]")
         return None
 
     # Resample data if interval is 'minute'
@@ -82,15 +92,11 @@ def store_data_non_orm(resampled_data, conn):
             (
                 row['date'],
                 row['symbol'],
-                Decimal(str(row['open'])).quantize(
-                    Decimal('0.01'), rounding=ROUND_HALF_UP),
-                Decimal(str(row['high'])).quantize(
-                    Decimal('0.01'), rounding=ROUND_HALF_UP),
-                Decimal(str(row['low'])).quantize(
-                    Decimal('0.01'), rounding=ROUND_HALF_UP),
-                Decimal(str(row['close'])).quantize(
-                    Decimal('0.01'), rounding=ROUND_HALF_UP),
-                int(row['volume'])
+                Decimal(str(row['open'])).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP),
+                Decimal(str(row['high'])).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP),
+                Decimal(str(row['low'])).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP),
+                Decimal(str(row['close'])).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP),
+                int(row['volume']),
             )
             for _, row in df.iterrows()
         ]
@@ -115,34 +121,41 @@ def store_data_non_orm(resampled_data, conn):
     # cursor.close()
     # conn.close()
     end_time = time.time()
-    console.print(
-        f"[green]Data storage completed in {end_time - start_time:.2f}s[/green]")
+    console.print(f"[green]Data storage completed in {end_time - start_time:.2f}s[/green]")
 
 
 def resample_data(complete_data: pd.DataFrame, interval: str):
     if interval == 'minute' and not complete_data.empty:
         resampling_start = time.time()
-        console.print(
-            "\n[bold cyan]Resampling data (5m, 15m, 60m, 1d)...[/bold cyan]")
+        console.print("\n[bold cyan]Resampling data (5m, 15m, 60m, 1d)...[/bold cyan]")
 
-        sampling = {'open': 'first', 'high': 'max',
-                    'low': 'min', 'close': 'last', 'volume': 'sum'}
+        sampling = {'open': 'first', 'high': 'max', 'low': 'min', 'close': 'last', 'volume': 'sum'}
         grouped_data = complete_data.groupby('symbol')
 
         # Filter only BANKNIFTY-I for 3min data
-        data3data = complete_data[complete_data['symbol']
-                                  == 'BANKNIFTY-I'].reset_index()
+        data3data = complete_data[complete_data['symbol'] == 'BANKNIFTY-I'].reset_index()
         data3data = data3data.groupby('symbol')
 
         data3 = data3data.resample('3min', on='date').agg(sampling).dropna()
 
         data5 = grouped_data.resample('5min', on='date').agg(sampling).dropna()
-        data15 = data5.reset_index().groupby('symbol').resample(
-            '15min', on='date').agg(sampling).dropna()
-        data60 = data15.reset_index().groupby("symbol").resample(
-            '60min', on='date').agg(sampling).dropna()
-        data1d = data60.reset_index().groupby('symbol').resample(
-            '1d', on='date').agg(sampling).dropna()
+        data15 = (
+            data5.reset_index()
+            .groupby('symbol')
+            .resample('15min', on='date')
+            .agg(sampling)
+            .dropna()
+        )
+        data60 = (
+            data15.reset_index()
+            .groupby("symbol")
+            .resample('60min', on='date')
+            .agg(sampling)
+            .dropna()
+        )
+        data1d = (
+            data60.reset_index().groupby('symbol').resample('1d', on='date').agg(sampling).dropna()
+        )
 
         resampled_data = {
             "idata_3min": data3.reset_index(),
@@ -154,16 +167,14 @@ def resample_data(complete_data: pd.DataFrame, interval: str):
 
         resample_time = time.time() - resampling_start
 
-        summary_table = Table(
-            box=box.SQUARE, title="Resampling Summary", header_style="bold cyan")
+        summary_table = Table(box=box.SQUARE, title="Resampling Summary", header_style="bold cyan")
         summary_table.add_column("Interval", justify="center")
         summary_table.add_column("Records", justify="right")
         for k, v in resampled_data.items():
             summary_table.add_row(k, str(len(v)))
         console.print(summary_table)
 
-        console.print(
-            f"[green]Resampling completed in {resample_time:.2f}s[/green]")
+        console.print(f"[green]Resampling completed in {resample_time:.2f}s[/green]")
         return resampled_data
 
 
@@ -183,15 +194,15 @@ def api_request(api, instrument_list, from_date, to_date, interval):
         "[cyan]{task.fields[rate]}[/cyan]",
         transient=False,
     ) as progress:
-        task = progress.add_task("Downloading", total=len(
-            instrument_list), rate="0.00 req/s")
+        task = progress.add_task("Downloading", total=len(instrument_list), rate="0.00 req/s")
 
         for index, instrument in instrument_list.iterrows():
             attempt = 0
             while True:
                 if attempt >= max_retries:
                     console.print(
-                        f"[red]Max retries reached for {instrument['tradingsymbol']}. Skipping...[/red]")
+                        f"[red]Max retries reached for {instrument['tradingsymbol']}. Skipping...[/red]"
+                    )
                     break
 
                 try:
@@ -212,21 +223,23 @@ def api_request(api, instrument_list, from_date, to_date, interval):
                         data['low'] = data['low'].astype(float).round(2)
                         data['close'] = data['close'].astype(float).round(2)
                         data['volume'] = data['volume'].astype(int)
-                        complete_data = pd.concat(
-                            [complete_data, data], ignore_index=True)
+                        complete_data = pd.concat([complete_data, data], ignore_index=True)
                     else:
                         time.sleep(0.01)  # slight delay for empty data
 
                     if attempt > 0:
                         console.print(
-                            f"[green]Successfully downloaded {instrument['tradingsymbol']} after {attempt} retries.[/green]")
+                            f"[green]Successfully downloaded {instrument['tradingsymbol']} after {attempt} retries.[/green]"
+                        )
                     break  # exit retry loop on success
                 except Exception as e:
                     console.print(
-                        f"[red]Error downloading {instrument['tradingsymbol']}:[/red] {e}")
+                        f"[red]Error downloading {instrument['tradingsymbol']}:[/red] {e}"
+                    )
                     if str(e) == "Too many requests":
                         console.print(
-                            "[yellow]Rate limit exceeded. Waiting before retrying...[/yellow]")
+                            "[yellow]Rate limit exceeded. Waiting before retrying...[/yellow]"
+                        )
                         time.sleep(0.001)
                         attempt += 1
                         continue
@@ -237,13 +250,23 @@ def api_request(api, instrument_list, from_date, to_date, interval):
                 time.sleep(0.01)  # brief pause to respect rate limits
             progress.update(task, advance=1, rate=rate)
 
-    console.print(
-        f"[green]Download completed for {len(instrument_list)} instruments.[/green]")
+    console.print(f"[green]Download completed for {len(instrument_list)} instruments.[/green]")
     console.print(f"Time taken: {time.time() - req_start:.2f}s")
     return complete_data
 
 
-def print_info(exchange, segment, instrument_list, interval, current_expiry, previous_expiry, from_date, to_date, no_of_days, profile):
+def print_info(
+    exchange,
+    segment,
+    instrument_list,
+    interval,
+    current_expiry,
+    previous_expiry,
+    from_date,
+    to_date,
+    no_of_days,
+    profile,
+):
     table_info = Table(box=box.SIMPLE_HEAVY)
     table_info.title = f"[bold magenta]Historical Data Fetcher"
     table_info.add_column("User Id", style="cyan", justify="right")
@@ -274,7 +297,7 @@ def print_info(exchange, segment, instrument_list, interval, current_expiry, pre
         str(previous_expiry.date()),
         str(from_date),
         str(to_date),
-        str(no_of_days)
+        str(no_of_days),
     )
 
     console.print(Align.center(table_info))
@@ -282,21 +305,29 @@ def print_info(exchange, segment, instrument_list, interval, current_expiry, pre
 
 def instruments(exchange='nfo'):
 
-    expiry_dates = pd.read_csv(os.path.join(
-        BASE_DIR, "instruments/expiries.csv"))
+    expiry_dates = pd.read_csv(os.path.join(BASE_DIR, "instruments/expiries.csv"))
     expiry_dates.sort_values(by="expiry", inplace=True)
     expiry_dates["expiry"] = pd.to_datetime(expiry_dates["expiry"])
 
-    current_expiry = expiry_dates[expiry_dates["expiry"] >= pd.to_datetime(
-        datetime.now().date())].iloc[0]["expiry"]
-    previous_expiry = expiry_dates[expiry_dates["expiry"] < pd.to_datetime(
-        datetime.now().date())].iloc[-1]["expiry"]
+    current_expiry = expiry_dates[
+        expiry_dates["expiry"] >= pd.to_datetime(datetime.now().date())
+    ].iloc[0]["expiry"]
+    previous_expiry = expiry_dates[
+        expiry_dates["expiry"] < pd.to_datetime(datetime.now().date())
+    ].iloc[-1]["expiry"]
 
     # if instruments-{exchange}.csv is not todays date then need to dowload todays from https://api.kite.trade/instruments
-    if not os.path.exists(os.path.join(BASE_DIR, f"instruments/instruments-{exchange}.csv")) or \
-            pd.to_datetime(os.path.getmtime(os.path.join(BASE_DIR, f"instruments/instruments-{exchange}.csv")), unit='s').date() != datetime.now().date():
+    if (
+        not os.path.exists(os.path.join(BASE_DIR, f"instruments/instruments-{exchange}.csv"))
+        or pd.to_datetime(
+            os.path.getmtime(os.path.join(BASE_DIR, f"instruments/instruments-{exchange}.csv")),
+            unit='s',
+        ).date()
+        != datetime.now().date()
+    ):
         console.print(
-            f"[bold yellow]Instruments file for {exchange} is outdated or missing. Downloading...[/bold yellow]")
+            f"[bold yellow]Instruments file for {exchange} is outdated or missing. Downloading...[/bold yellow]"
+        )
         # Download the instruments file
         url = f"https://api.kite.trade/instruments"
         response = requests.get(url)
@@ -305,19 +336,16 @@ def instruments(exchange='nfo'):
                 f.write(response.content)
         else:
             console.print(
-                f"[bold red]Failed to download instruments file for {exchange}[/bold red]")
+                f"[bold red]Failed to download instruments file for {exchange}[/bold red]"
+            )
             return None, None, None
 
-    instrument_list = pd.read_csv(os.path.join(
-        BASE_DIR, f"instruments/instruments-{exchange}.csv"))
-    instrument_list['expiry'] = pd.to_datetime(
-        instrument_list['expiry'], errors='coerce')
-    instrument_list = instrument_list[instrument_list['exchange'] == exchange.upper(
-    )]
+    instrument_list = pd.read_csv(os.path.join(BASE_DIR, f"instruments/instruments-{exchange}.csv"))
+    instrument_list['expiry'] = pd.to_datetime(instrument_list['expiry'], errors='coerce')
+    instrument_list = instrument_list[instrument_list['exchange'] == exchange.upper()]
     instrument_list = instrument_list[instrument_list['segment'] == 'NFO-FUT']
 
-    instrument_list = instrument_list[instrument_list['expiry'] == pd.to_datetime(
-        current_expiry)]
+    instrument_list = instrument_list[instrument_list['expiry'] == pd.to_datetime(current_expiry)]
     instrument_list.sort_values(by="tradingsymbol", inplace=True)
     instrument_list.reset_index(drop=True, inplace=True)
 
@@ -325,23 +353,20 @@ def instruments(exchange='nfo'):
 
 
 def banknifty_options_chain() -> pd.DataFrame:
-    expiry_dates = pd.read_csv(os.path.join(
-        BASE_DIR, "instruments/expiries.csv"))
+    expiry_dates = pd.read_csv(os.path.join(BASE_DIR, "instruments/expiries.csv"))
     expiry_dates.sort_values(by="expiry", inplace=True)
     expiry_dates["expiry"] = pd.to_datetime(expiry_dates["expiry"])
 
-    current_expiry = expiry_dates[expiry_dates["expiry"] >= pd.to_datetime(
-        datetime.now().date())].iloc[0]["expiry"]
+    current_expiry = expiry_dates[
+        expiry_dates["expiry"] >= pd.to_datetime(datetime.now().date())
+    ].iloc[0]["expiry"]
 
-    instrument_list = pd.read_csv(os.path.join(
-        BASE_DIR, f"instruments/instruments-nfo.csv"))
-    instrument_list['expiry'] = pd.to_datetime(
-        instrument_list['expiry'], errors='coerce')
+    instrument_list = pd.read_csv(os.path.join(BASE_DIR, f"instruments/instruments-nfo.csv"))
+    instrument_list['expiry'] = pd.to_datetime(instrument_list['expiry'], errors='coerce')
     instrument_list = instrument_list[instrument_list['exchange'] == 'NFO']
     instrument_list = instrument_list[instrument_list['segment'] == 'NFO-OPT']
     instrument_list = instrument_list[instrument_list['name'] == 'BANKNIFTY']
-    instrument_list = instrument_list[instrument_list['expiry'] == pd.to_datetime(
-        current_expiry)]
+    instrument_list = instrument_list[instrument_list['expiry'] == pd.to_datetime(current_expiry)]
     instrument_list.sort_values(by="tradingsymbol", inplace=True)
     instrument_list.reset_index(drop=True, inplace=True)
 
