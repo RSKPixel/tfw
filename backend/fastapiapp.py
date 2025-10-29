@@ -12,6 +12,10 @@ origins = [
     "http://localhost:5173",
     "http://127.0.0.1:5173",
     "http://localhost:8000",
+    "http://tfw2.trialnerror.in",
+    "https://tfw2.trialnerror.in",
+    "http://tfw.trialnerror.in",
+    "https://tfw.trialnerror.in",
 ]
 
 
