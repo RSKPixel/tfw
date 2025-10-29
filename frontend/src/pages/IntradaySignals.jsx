@@ -13,7 +13,7 @@ const IntradaySignals = () => {
   const [sellSignals, setSellSignals] = useState([]);
   const [refresh, setRefresh] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [testing, setTesting] = useState(true);
+  const [testing, setTesting] = useState(false);
   const [selectedCall, setSelectedCall] = useState("buy");
   const [selectedSymbol, setSelectedSymbol] = useState(null);
   const [timeframe, setTimeframe] = useState("15min");
