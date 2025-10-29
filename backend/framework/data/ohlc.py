@@ -141,8 +141,6 @@ def fetch_ta_data(symbol="", from_date="", to_date="", timeframe="1day", conn=No
             (df["low"] == df["low"].rolling(window=2 * n + 1, center=True).min())
         ]
 
-        if symbol == "FEDERALBNK-I":
-            df[["date", "pivot_high", "pivot_low"]].to_clipboard()
         df["intraday_buy"] = (
             (df["ema_13"] > df["ema_50"])
             & (df["ema_50"] > df["ema_200"])

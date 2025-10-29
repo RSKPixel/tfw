@@ -1,16 +1,39 @@
-import React, { useLayoutEffect, useRef, useEffect, useState } from "react";
+import React, {
+  useLayoutEffect,
+  useRef,
+  useEffect,
+  useState,
+  useContext,
+} from "react";
 import {
   createChart,
   ColorType,
   CandlestickSeries,
   LineSeries,
 } from "lightweight-charts";
+import GlobalContext from "../template/GlobalContext";
 
-export default function CandleChart({ data = [] }) {
+export default function CandleChart({ symbol = "", timeframe = "15min" }) {
   const containerRef = useRef(null);
   const chartRef = useRef(null);
   const seriesRef = useRef(null);
+  const { api } = useContext(GlobalContext);
+  const [data, setData] = useState([]);
   const [hoverData, setHoverData] = useState(null);
+
+  useEffect(() => {
+    if (!symbol) return;
+
+    fetch(
+      `${api}/ta?symbol=${encodeURIComponent(
+        symbol
+      )}&from_date=2025-10-01&timeframe=${timeframe}`
+    )
+      .then((res) => res.json())
+      .then((json) => setData(json.splice(-100))) // last 100 data points
+      .catch((err) => console.error("Error fetching data:", err));
+  }, [symbol, timeframe]);
+
   useLayoutEffect(() => {
     const el = containerRef.current;
     if (!el) return;

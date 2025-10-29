@@ -30,7 +30,7 @@ const Basetemplate = ({
       </div>
 
       {/* Main Layout */}
-      <div className="flex flex-row text-stone-200 w-full flex-1 overflow-hidden pt-9">
+      <div className="flex flex-row text-stone-200 bg-gray-900 w-full flex-1 overflow-hidden pt-9">
         {children}
       </div>
     </div>

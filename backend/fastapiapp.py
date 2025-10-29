@@ -71,5 +71,15 @@ async def scanner_intraday_signals():
     return {"status": "success", "buy_signals": buy_signals, "sell_signals": sell_signals}
 
 
+@app.get("/scanner/intraday-test-data")
+async def scanner_intraday_test_data():
+    # Load test data from a local JSON file
+    import json
+
+    with open('signals.json') as f:
+        test_data = json.load(f)
+    return responses.JSONResponse(content=test_data)
+
+
 if __name__ == "__main__":
     uvicorn.run("fastapiapp:app", host="127.0.0.1", port=8000, reload=True)

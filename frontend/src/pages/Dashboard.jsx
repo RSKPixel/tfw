@@ -1,26 +1,16 @@
 import React, { useContext, useEffect, useState } from "react";
 import GlobalContext from "../template/GlobalContext";
+import CandleChart from "../components/CandleChart";
+import Tv from "../components/Tv";
 
 const Dashboard = () => {
   const { api } = useContext(GlobalContext);
   const [data, setData] = useState([]);
+  const [symbols, setSymbols] = useState([]);
   const [selectedSymbol, setSelectedSymbol] = useState("");
   const [timeframe, setTimeframe] = useState("15min");
 
   const provider = { api };
-
-  useEffect(() => {
-    if (!selectedSymbol) return;
-
-    fetch(
-      `${api}/ta?symbol=${encodeURIComponent(
-        selectedSymbol
-      )}&from_date=2025-10-01&timeframe=${timeframe}`
-    )
-      .then((res) => res.json())
-      .then((json) => setData(json))
-      .catch((err) => console.error("Error fetching data:", err));
-  }, [selectedSymbol, timeframe]);
 
   const handleSelection = (event) => {
     const selectedOptions = Array.from(event.target.selectedOptions).map(
@@ -81,9 +71,18 @@ const Dashboard = () => {
             ))}
         </select>
       </div>
-      ;{/* Main Content */}
+      {/* Main Content */}
       <div className="flex flex-col w-full bg-gray-800 p-4 items-center overflow-y-scroll scrollbar-thin scrollbar-track-gray-800 scrollbar-thumb-sky-900">
-        {children}
+        {selectedSymbol ? (
+          // <CandleChart symbol={selectedSymbol} timeframe={timeframe} />
+          <Tv />
+        ) : (
+          <div className="text-stone-300 mt-20">
+            {selectedSymbol
+              ? "Loading data..."
+              : "Please select a symbol to view the chart."}
+          </div>
+        )}
       </div>
     </>
   );

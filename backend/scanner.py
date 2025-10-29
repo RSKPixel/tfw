@@ -67,49 +67,49 @@ def scan_intraday_signal(from_date="", to_date="", timeframe="15min", conn=None)
 
         df = pd.DataFrame(ta_data)
         pivots = df[["date", "pivot_high", "pivot_low"]]
-        if symbol == "FEDERALBNK-I":
-            pivots.to_clipboard(index=False)
+
+        # if symbol == "FEDERALBNK-I":
+        #     pivots.to_clipboard(index=False)
+
         dates = df["date"].unique()
         latest_date = max(pd.to_datetime(dates)).date()
         df = df[pd.to_datetime(df["date"]).dt.date == latest_date]
 
         for index, row in df.iterrows():
+            pivot_data = pivots[pivots["date"] <= row["date"]]
+
+            last_high = pivot_data.loc[pivot_data["pivot_high"].notna(), "pivot_high"].iloc[-1]
+            last_low = pivot_data.loc[pivot_data["pivot_low"].notna(), "pivot_low"].iloc[-1]
+
+            fibo_levels = {}
+
             if row["intraday_buy"]:
                 # Identify 1 pivot low and pivot high to get fibo levels
-                pivot_data = pivots[pivots["date"] <= row["date"]]
-
-                last_high = pivot_data.loc[pivot_data["pivot_high"].notna(), "pivot_high"].iloc[-1]
-                last_low = pivot_data.loc[pivot_data["pivot_low"].notna(), "pivot_low"].iloc[-1]
-
-                if symbol == "FEDERALBNK-I":
-                    print(last_high, last_low)
-                fibo_levels = {}
                 if last_high is not None and last_low is not None:
-                    high_price = last_high
-                    low_price = last_low
-                    diff = high_price - low_price
+                    high = last_high
+                    low = last_low
+                    diff = high - low
                     fibo_levels = {
-                        "0.0%": high_price,
-                        "23.6%": high_price - 0.236 * diff,
-                        "38.2%": high_price - 0.382 * diff,
-                        "50.0%": high_price - 0.5 * diff,
-                        "61.8%": high_price - 0.618 * diff,
-                        "100.0%": low_price,
-                        "161.8%": low_price - 0.618 * diff,
+                        "0.0%": low,
+                        "23.6%": low + 0.236 * diff,
+                        "38.2%": low + 0.382 * diff,
+                        "50.0%": low + 0.5 * diff,
+                        "61.8%": low + 0.618 * diff,
+                        "78.6%": low + 0.786 * diff,
+                        "100.0%": high,
+                        "161.8%": high + 0.618 * diff,
                     }
-
                 signal = {
                     "symbol": symbol,
                     "date": pd.to_datetime(row["date"]).strftime("%d-%m-%Y %H:%M:%S"),
+                    "ltp": float(row["close"]),
                     "last_high": last_high,
                     "last_low": last_low,
-                    "0.0%": fibo_levels.get("0.0%"),
-                    "23.6%": fibo_levels.get("23.6%"),
-                    "38.2%": fibo_levels.get("38.2%"),
-                    "50.0%": fibo_levels.get("50.0%"),
-                    "61.8%": fibo_levels.get("61.8%"),
-                    "100.0%": fibo_levels.get("100.0%"),
-                    "161.8%": fibo_levels.get("161.8%"),
+                    "entry": fibo_levels.get("50.0%"),
+                    "sl": fibo_levels.get("38.2%"),
+                    "target_1": fibo_levels.get("78.6%"),
+                    "target_2": fibo_levels.get("100.0%"),
+                    "target_3": fibo_levels.get("161.8%"),
                 }
 
                 intraday_buy_symbols = pd.concat(
@@ -117,11 +117,34 @@ def scan_intraday_signal(from_date="", to_date="", timeframe="15min", conn=None)
                 )
 
             if row["intraday_sell"]:
-                signal = {
-                    "symbol": symbol,
-                    "date": pd.to_datetime(row["date"]).strftime("%d-%m-%Y %H:%M:%S"),
-                    "value": float(row["close"]),
-                }
+
+                if last_high is not None and last_low is not None:
+                    high = last_high
+                    low = last_low
+                    diff = high - low
+                    fibo_levels = {
+                        "0.0%": high,
+                        "23.6%": high - 0.236 * diff,
+                        "38.2%": high - 0.382 * diff,
+                        "50.0%": high - 0.5 * diff,
+                        "61.8%": high - 0.618 * diff,
+                        "78.6%": high - 0.786 * diff,
+                        "100.0%": low,
+                        "161.8%": low - 0.618 * diff,
+                    }
+
+                    signal = {
+                        "symbol": symbol,
+                        "date": pd.to_datetime(row["date"]).strftime("%d-%m-%Y %H:%M:%S"),
+                        "ltp": float(row["close"]),
+                        "last_high": last_high,
+                        "last_low": last_low,
+                        "entry": fibo_levels.get("50.0%"),
+                        "sl": fibo_levels.get("38.2%"),
+                        "target_1": fibo_levels.get("78.6%"),
+                        "target_2": fibo_levels.get("100.0%"),
+                        "target_3": fibo_levels.get("161.8%"),
+                    }
                 intraday_sell_symbols = pd.concat(
                     [intraday_sell_symbols, pd.DataFrame([signal])], ignore_index=True
                 )
@@ -158,27 +181,24 @@ def scan(notify_telegram=False):
     buy_signal_tab.add_column("Signal Candle", justify="left")
     buy_signal_tab.add_column("Last High", justify="right")
     buy_signal_tab.add_column("Last Low", justify="right")
-    buy_signal_tab.add_column("0.0%", justify="right")
-    buy_signal_tab.add_column("23.6%", justify="right")
-    buy_signal_tab.add_column("38.2%", justify="right")
-    buy_signal_tab.add_column("50.0%", justify="right")
-    buy_signal_tab.add_column("61.8%", justify="right")
-    buy_signal_tab.add_column("100.0%", justify="right")
-    # buy_signal_tab.add_column("161.8%", justify="right")
+    buy_signal_tab.add_column("Entry", justify="right")
+    buy_signal_tab.add_column("SL", justify="right")
+    buy_signal_tab.add_column("Target 1", justify="right")
+    buy_signal_tab.add_column("Target 2", justify="right")
+    buy_signal_tab.add_column("Target 3", justify="right")
 
     for signal in buy_signals:
+        # if signal["symbol"] == "ASHOKLEY-I":
         buy_signal_tab.add_row(
             fmt(signal["symbol"]),
             fmt(signal["date"]),
             fmt(signal["last_high"]),
             fmt(signal["last_low"]),
-            fmt(signal["0.0%"]),
-            fmt(signal["23.6%"]),
-            fmt(signal["38.2%"]),
-            fmt(signal["50.0%"]),
-            fmt(signal["61.8%"]),
-            fmt(signal["100.0%"]),
-            # fmt(signal["161.8%"]),
+            fmt(signal["entry"]),
+            fmt(signal["sl"]),
+            fmt(signal["target_1"]),
+            fmt(signal["target_2"]),
+            fmt(signal["target_3"]),
         )
 
     sell_signal_tab = Table(
@@ -189,8 +209,8 @@ def scan(notify_telegram=False):
     sell_signal_tab.add_column("Symbol", justify="left")
     sell_signal_tab.add_column("Signal Candle", justify="left")
 
-    for signal in sell_signals:
-        sell_signal_tab.add_row(signal["symbol"], signal["date"])
+    # for signal in sell_signals:
+    #     sell_signal_tab.add_row(signal["symbol"], signal["date"])
 
     if buy_signals or sell_signals:
         console.print(Columns([buy_signal_tab, sell_signal_tab]))
