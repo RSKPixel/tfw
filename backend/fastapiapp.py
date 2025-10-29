@@ -39,7 +39,6 @@ async def ohlc(symbol: str = "", from_date: str = "", to_date: str = "", timefra
         "timeframe": timeframe,
         "conn": conn,
     }
-    print(params)
 
     json_data = fetch_ohlc_data(**params)
     return responses.JSONResponse(content=json_data)
