@@ -10,8 +10,6 @@ function App() {
   const api = import.meta.env.VITE_API_URL;
   const provider = { api };
 
-  console.log("API URL:", api);
-
   return (
     <Router>
       <GlobalContext.Provider value={provider}>
