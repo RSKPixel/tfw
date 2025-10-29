@@ -7,7 +7,7 @@ import Dashboard from "./pages/Dashboard";
 import IntradaySignals from "./pages/IntradaySignals";
 
 function App() {
-  const api = "http://127.0.0.1:8000";
+  const api = import.meta.env.VITE_API_URL;
   const provider = { api };
 
   return (
