@@ -102,11 +102,14 @@ const IntradaySignals = () => {
             setSelectedSymbol(event.target.value || null);
           }}
         >
-          {Object.keys(groupedSignals).map((symbol) => (
-            <option key={symbol} value={symbol} className="p-2">
-              {symbol} ({groupedSignals[symbol].length})
-            </option>
-          ))}
+          {Object.keys(groupedSignals).map((symbol) => {
+            // if (groupedSignals[symbol].length < 2) return null;
+            return (
+              <option key={symbol} value={symbol} className="p-2">
+                {symbol} ({groupedSignals[symbol].length})
+              </option>
+            );
+          })}
         </select>
       </div>
       {/* main content */}
@@ -123,7 +126,7 @@ const IntradaySignals = () => {
                   <th className="border border-gray-600 px-4 py-2 w-[15%]">
                     Date
                   </th>
-                  <th className="border border-gray-600 px-4 py-2 w-[15%]">
+                  <th className="border border-gray-600 px-4 py-2 w-[10%]">
                     LTP
                   </th>
                   <th className="border border-gray-600 px-4 py-2 w-[15%]">
@@ -136,10 +139,13 @@ const IntradaySignals = () => {
                     Targets 1
                   </th>
                   <th className="border border-gray-600 px-4 py-2 w-[15%]">
-                    Targets 2
+                    Last High
                   </th>
                   <th className="border border-gray-600 px-4 py-2 w-[15%]">
-                    Targets 3
+                    Last Low
+                  </th>
+                  <th className="border border-gray-600 px-4 py-2 w-[15%]">
+                    Indicators
                   </th>
                 </tr>
               </thead>
@@ -167,10 +173,18 @@ const IntradaySignals = () => {
                       {numeral(signal.target_1).format()}
                     </td>
                     <td className="border border-gray-600 px-4 py-2">
-                      {numeral(signal.target_2).format()}
+                      {numeral(signal.last_high).format()} <br />
+                      {moment(signal.last_high_date).format("DD-MM-YYYY HH:mm")}
                     </td>
                     <td className="border border-gray-600 px-4 py-2">
-                      {numeral(signal.target_3).format()}
+                      {numeral(signal.last_low).format()} <br />
+                      {moment(signal.last_low_date).format("DD-MM-YYYY HH:mm")}
+                    </td>
+                    <td className="border border-gray-600 px-4 py-2">
+                      {numeral(signal.ema13).format()} <br />
+                      {numeral(signal.ema50).format()} <br />
+                      {numeral(signal.ema200).format()} <br />
+                      {numeral(signal.rsi3).format()}
                     </td>
                   </tr>
                 ))}

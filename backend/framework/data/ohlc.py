@@ -144,19 +144,21 @@ def fetch_ta_data(symbol="", from_date="", to_date="", timeframe="1day", conn=No
         df["intraday_buy"] = (
             (df["ema_13"] > df["ema_50"])
             & (df["ema_50"] > df["ema_200"])
-            & (df["rsi_3"] > 80)
+            & (df["rsi_3"] > 70)
             & (df["close"] > df["open"])
             & (df["close"].shift(1) > df["open"].shift(1))
             & (df["close"] > df["high"].shift(1))
+            & (df["close"] > df["ema_13"])
         )
 
         df["intraday_sell"] = (
             (df["ema_13"] < df["ema_50"])
             & (df["ema_50"] < df["ema_200"])
-            & (df["rsi_3"] < 20)
+            & (df["rsi_3"] < 30)
             & (df["close"] < df["open"])
             & (df["close"].shift(1) < df["open"].shift(1))
             & (df["close"] < df["low"].shift(1))
+            & (df["close"] < df["ema_13"])
         )
 
         df['sma_20'] = ta.SMA(df['close'], timeperiod=20)

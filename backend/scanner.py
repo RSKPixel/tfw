@@ -68,18 +68,17 @@ def scan_intraday_signal(from_date="", to_date="", timeframe="15min", conn=None)
         df = pd.DataFrame(ta_data)
         pivots = df[["date", "pivot_high", "pivot_low"]]
 
-        # if symbol == "FEDERALBNK-I":
-        #     pivots.to_clipboard(index=False)
-
         dates = df["date"].unique()
         latest_date = max(pd.to_datetime(dates)).date()
         df = df[pd.to_datetime(df["date"]).dt.date == latest_date]
 
         for index, row in df.iterrows():
-            pivot_data = pivots[pivots["date"] <= row["date"]]
+            pivot_data = pivots[pivots["date"] < row["date"]]
 
             last_high = pivot_data.loc[pivot_data["pivot_high"].notna(), "pivot_high"].iloc[-1]
+            last_high_date = pivot_data.loc[pivot_data["pivot_high"].notna(), "date"].iloc[-1]
             last_low = pivot_data.loc[pivot_data["pivot_low"].notna(), "pivot_low"].iloc[-1]
+            last_low_date = pivot_data.loc[pivot_data["pivot_low"].notna(), "date"].iloc[-1]
 
             fibo_levels = {}
 
@@ -104,7 +103,13 @@ def scan_intraday_signal(from_date="", to_date="", timeframe="15min", conn=None)
                     "date": pd.to_datetime(row["date"]).strftime("%d-%m-%Y %H:%M:%S"),
                     "ltp": float(row["close"]),
                     "last_high": last_high,
+                    "last_high_date": last_high_date,
                     "last_low": last_low,
+                    "last_low_date": last_low_date,
+                    "ema13": float(row["ema_13"]),
+                    "ema50": float(row["ema_50"]),
+                    "ema200": float(row["ema_200"]),
+                    "rsi3": float(row["rsi_3"]),
                     "entry": fibo_levels.get("50.0%"),
                     "sl": fibo_levels.get("38.2%"),
                     "target_1": fibo_levels.get("78.6%"),
@@ -138,7 +143,13 @@ def scan_intraday_signal(from_date="", to_date="", timeframe="15min", conn=None)
                         "date": pd.to_datetime(row["date"]).strftime("%d-%m-%Y %H:%M:%S"),
                         "ltp": float(row["close"]),
                         "last_high": last_high,
+                        "last_high_date": last_high_date,
                         "last_low": last_low,
+                        "last_low_date": last_low_date,
+                        "ema13": float(row["ema_13"]),
+                        "ema50": float(row["ema_50"]),
+                        "ema200": float(row["ema_200"]),
+                        "rsi3": float(row["rsi_3"]),
                         "entry": fibo_levels.get("50.0%"),
                         "sl": fibo_levels.get("38.2%"),
                         "target_1": fibo_levels.get("78.6%"),
@@ -149,12 +160,8 @@ def scan_intraday_signal(from_date="", to_date="", timeframe="15min", conn=None)
                     [intraday_sell_symbols, pd.DataFrame([signal])], ignore_index=True
                 )
 
-    intraday_buy_symbols = intraday_buy_symbols.sort_values(by=["date"]).to_dict(orient="records")[
-        -1000:
-    ]
-    intraday_sell_symbols = intraday_sell_symbols.sort_values(by=["date"]).to_dict(
-        orient="records"
-    )[-1000:]
+    intraday_buy_symbols = intraday_buy_symbols.sort_values(by=["date"]).to_dict(orient="records")
+    intraday_sell_symbols = intraday_sell_symbols.sort_values(by=["date"]).to_dict(orient="records")
     return intraday_buy_symbols, intraday_sell_symbols
 
 
