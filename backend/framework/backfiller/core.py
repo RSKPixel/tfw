@@ -130,56 +130,60 @@ def resample_data(complete_data: pd.DataFrame, interval: str):
         # console.print("\n[bold cyan]Resampling data (5m, 15m, 60m, 1d)...[/bold cyan]")
 
         sampling = {'open': 'first', 'high': 'max', 'low': 'min', 'close': 'last', 'volume': 'sum'}
+        # remove data with volume 0
+        complete_data = complete_data[complete_data['volume'] > 0]
         grouped_data = complete_data.groupby('symbol')
 
         # Filter only BANKNIFTY-I for 3min data
-        console.print("\n[bold cyan]Resampling data (3min) for Bank Nifty Only...[/bold cyan]")
         data3data = complete_data[complete_data['symbol'] == 'BANKNIFTY-I'].reset_index()
         data3data = data3data.groupby('symbol')
 
+        console.print("\n[bold cyan]Resampling data (3min) for Bank Nifty Only...[/bold cyan]")
         data3 = data3data.resample('3min', on='date').agg(sampling).dropna()
 
         console.print("\n[bold cyan]Resampling data (5mins) for All Symbols...[/bold cyan]")
         data5 = grouped_data.resample('5min', on='date').agg(sampling).dropna()
 
         console.print("\n[bold cyan]Resampling data (15mins) for All Symbols...[/bold cyan]")
-        data15 = (
-            data5.reset_index()
-            .groupby('symbol')
-            .resample('15min', on='date')
-            .agg(sampling)
-            .dropna()
-        )
+        data15 = grouped_data.resample('15min', on='date').agg(sampling).dropna()
 
-        console.print("\n[bold cyan]Resampling data (60mins) for All Symbols...[/bold cyan]")
-        data15_copy = data15.reset_index()
-
-        # Add a separate "day" column (to group by trading day)
-        data15_copy["day"] = data15_copy["date"].dt.date
-
-        # Now resample safely
-        data60 = (
-            data15_copy.set_index("date")
-            .groupby(["symbol", "day"], group_keys=False)
-            .apply(
-                lambda x: x.resample("60min", offset="15min").agg(sampling),
-                include_groups=False,  # ✅ correct placement
-            )
-            .dropna()
-            .reset_index()
-        )
-        # data60.drop(columns=["day"], inplace=True)
-        # data60 = (
-        #     data15.reset_index()
-        #     .groupby("symbol")
-        #     .resample('60min', on='date')
+        # data15 = (
+        #     data5.reset_index()
+        #     .groupby('symbol')
+        #     .resample('15min', on='date')
         #     .agg(sampling)
         #     .dropna()
         # )
 
+        console.print("\n[bold cyan]Resampling data (60mins) for All Symbols...[/bold cyan]")
+        data60 = grouped_data.resample('60min', on='date', offset="15min").agg(sampling).dropna()
+
+        # data15_copy = data15.reset_index()
+
+        # # Add a separate "day" column (to group by trading day)
+        # data15_copy["day"] = data15_copy["date"].dt.date
+        # data15_copy = data15_copy[
+        #     (data15_copy["date"].dt.time >= pd.to_datetime("09:15").time())
+        #     & (data15_copy["date"].dt.time <= pd.to_datetime("15:30").time())
+        # ]
+
+        # data60 = (
+        #     data15_copy.set_index("date")
+        #     .groupby(["symbol", "day"], group_keys=False)
+        #     .apply(
+        #         lambda x: x.resample("60min", offset="15min")
+        #         .agg(sampling)
+        #         .assign(symbol=x.name[0]),  # ✅ manually restore
+        #         include_groups=False,
+        #     )
+        #     .dropna()
+        #     .reset_index()
+        # )
+
         console.print("\n[bold cyan]Resampling data (1day) for All Symbols...[/bold cyan]")
-        # data60_copy = data60.reset_index()
-        data1d = data15_copy.groupby('symbol').resample('1d', on='date').agg(sampling).dropna()
+        data1d = grouped_data.resample('1d', on='date').agg(sampling).dropna()
+
+        # data1d = data15_copy.groupby('symbol').resample('1d', on='date').agg(sampling).dropna()
 
         resampled_data = {
             "idata_3min": data3.reset_index(),
@@ -208,6 +212,7 @@ def api_request(api, instrument_list, from_date, to_date, interval):
     complete_data = pd.DataFrame()
     max_retries = 3
     retry_delay = 2
+    api_log = []
 
     with Progress(
         "[progress.description]{task.description}",
@@ -237,6 +242,8 @@ def api_request(api, instrument_list, from_date, to_date, interval):
                         interval=interval,
                     )
 
+                    api_log.append({"instrument": instrument["tradingsymbol"], "data": len(data)})
+
                     request_count += 1
                     if len(data) != 0:
                         data = pd.DataFrame(data)
@@ -255,6 +262,7 @@ def api_request(api, instrument_list, from_date, to_date, interval):
                         console.print(
                             f"[green]Successfully downloaded {instrument['tradingsymbol']} after {attempt} retries.[/green]"
                         )
+
                     break  # exit retry loop on success
                 except Exception as e:
                     console.print(
@@ -276,6 +284,7 @@ def api_request(api, instrument_list, from_date, to_date, interval):
 
     console.print(f"[green]Download completed for {len(instrument_list)} instruments.[/green]")
     console.print(f"Time taken: {time.time() - req_start:.2f}s")
+
     return complete_data
 
 
