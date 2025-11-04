@@ -1,3 +1,4 @@
+from cProfile import label
 import sys
 import os
 from datetime import datetime, timedelta, timezone
@@ -18,6 +19,7 @@ from rich.align import Align
 from decimal import Decimal, ROUND_HALF_UP
 import psycopg2
 from psycopg2.extras import execute_values
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 console = Console()
 
@@ -70,7 +72,8 @@ def historicals(
         return None
 
     # Resample data if interval is 'minute'
-    resampled_data = resample_data(complete_data, interval)
+    # resampled_data = resample_data(complete_data, interval)
+    resampled_data = resample_data_multithread(complete_data, interval)
 
     # Postgresql Storage (To be implemented)
     store_data_non_orm(resampled_data, conn=conn)
@@ -127,11 +130,8 @@ def store_data_non_orm(resampled_data, conn):
 def resample_data(complete_data: pd.DataFrame, interval: str):
     if interval == 'minute' and not complete_data.empty:
         resampling_start = time.time()
-        # console.print("\n[bold cyan]Resampling data (5m, 15m, 60m, 1d)...[/bold cyan]")
 
         sampling = {'open': 'first', 'high': 'max', 'low': 'min', 'close': 'last', 'volume': 'sum'}
-        # remove data with volume 0
-        complete_data = complete_data[complete_data['volume'] > 0]
         grouped_data = complete_data.groupby('symbol')
 
         # Filter only BANKNIFTY-I for 3min data
@@ -147,43 +147,11 @@ def resample_data(complete_data: pd.DataFrame, interval: str):
         console.print("\n[bold cyan]Resampling data (15mins) for All Symbols...[/bold cyan]")
         data15 = grouped_data.resample('15min', on='date').agg(sampling).dropna()
 
-        # data15 = (
-        #     data5.reset_index()
-        #     .groupby('symbol')
-        #     .resample('15min', on='date')
-        #     .agg(sampling)
-        #     .dropna()
-        # )
-
         console.print("\n[bold cyan]Resampling data (60mins) for All Symbols...[/bold cyan]")
         data60 = grouped_data.resample('60min', on='date', offset="15min").agg(sampling).dropna()
 
-        # data15_copy = data15.reset_index()
-
-        # # Add a separate "day" column (to group by trading day)
-        # data15_copy["day"] = data15_copy["date"].dt.date
-        # data15_copy = data15_copy[
-        #     (data15_copy["date"].dt.time >= pd.to_datetime("09:15").time())
-        #     & (data15_copy["date"].dt.time <= pd.to_datetime("15:30").time())
-        # ]
-
-        # data60 = (
-        #     data15_copy.set_index("date")
-        #     .groupby(["symbol", "day"], group_keys=False)
-        #     .apply(
-        #         lambda x: x.resample("60min", offset="15min")
-        #         .agg(sampling)
-        #         .assign(symbol=x.name[0]),  # ✅ manually restore
-        #         include_groups=False,
-        #     )
-        #     .dropna()
-        #     .reset_index()
-        # )
-
         console.print("\n[bold cyan]Resampling data (1day) for All Symbols...[/bold cyan]")
         data1d = grouped_data.resample('1d', on='date').agg(sampling).dropna()
-
-        # data1d = data15_copy.groupby('symbol').resample('1d', on='date').agg(sampling).dropna()
 
         resampled_data = {
             "idata_3min": data3.reset_index(),
@@ -202,6 +170,76 @@ def resample_data(complete_data: pd.DataFrame, interval: str):
             summary_table.add_row(k, str(len(v)))
         console.print(summary_table)
 
+        console.print(f"[green]Resampling completed in {resample_time:.2f}s[/green]")
+        return resampled_data
+
+
+def resample_data_multithread(complete_data: pd.DataFrame, interval: str):
+    if interval == 'minute' and not complete_data.empty:
+        resampling_start = time.time()
+
+        sampling = {'open': 'first', 'high': 'max', 'low': 'min', 'close': 'last', 'volume': 'sum'}
+        grouped_data = complete_data.groupby('symbol')
+
+        def resample(freq, label, **kwargs):
+            if freq == '3min':
+                data = complete_data[complete_data['symbol'] == 'BANKNIFTY-I'].reset_index()
+                data = data.groupby('symbol')
+            else:
+                data = grouped_data
+
+            return data.resample(freq, on='date', **kwargs).agg(sampling).dropna()
+
+        tasks = [
+            ("3min", "3mins", {}),
+            ("5min", "5mins", {}),
+            ("15min", "15mins", {}),
+            ("60min", "60mins", {"offset": "15min"}),
+            ("1d", "1day", {}),
+        ]
+
+        results = {}
+        with ThreadPoolExecutor(max_workers=4) as executor:
+            start_time = time.time()
+            future_to_label = {
+                executor.submit(resample, freq, label, **kwargs): label
+                for freq, label, kwargs in tasks
+            }
+
+            for future in as_completed(future_to_label):
+                label = future_to_label[future]
+                end_time = time.time()
+                try:
+                    results[label] = future.result()
+                    console.print(
+                        f"[green]✓ Completed resampling {label} in {end_time - start_time:.2f}s[/green]"
+                    )
+                except Exception as e:
+                    console.print(f"[red]✗ Error resampling {label}: {e}[/red]")
+
+        data3 = results["3mins"]
+        data5 = results["5mins"]
+        data15 = results["15mins"]
+        data60 = results["60mins"]
+        data1d = results["1day"]
+
+        resampled_data = {
+            "idata_3min": data3.reset_index(),
+            "idata_5min": data5.reset_index(),
+            "idata_15min": data15.reset_index(),
+            "idata_60min": data60.reset_index(),
+            "idata_1day": data1d.reset_index(),
+        }
+
+        resample_time = time.time() - resampling_start
+
+        summary_table = Table(box=box.SQUARE, title="Resampling Summary", header_style="bold cyan")
+        summary_table.add_column("Interval", justify="center")
+        summary_table.add_column("Records", justify="right")
+        for k, v in resampled_data.items():
+            summary_table.add_row(k, str(len(v)))
+
+        console.print(summary_table)
         console.print(f"[green]Resampling completed in {resample_time:.2f}s[/green]")
         return resampled_data
 

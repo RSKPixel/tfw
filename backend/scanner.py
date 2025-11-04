@@ -66,6 +66,9 @@ def scan_intraday_signal(from_date="", to_date="", timeframe="15min", conn=None)
             continue
 
         df = pd.DataFrame(ta_data)
+        if symbol == "JSWENERGY-I":
+            df.to_clipboard()
+
         pivots = df[["date", "pivot_high", "pivot_low"]]
 
         dates = df["date"].unique()
