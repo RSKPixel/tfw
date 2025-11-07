@@ -1,9 +1,10 @@
-from turtle import pd
+# from turtle import pd
 from fastapi import FastAPI, Request, responses
 from framework.data.ohlc import fetch_ohlc_data
 from framework.data.ohlc import fetch_ta_data, symbols
 from scanner import scan_intraday_signal
 from datetime import datetime
+
 import pandas as pd
 import pytz
 import config
