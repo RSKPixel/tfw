@@ -97,7 +97,7 @@ const IntradaySignals = () => {
         <select
           className="bg-gray-900 pt-2 pb-4 text-sm rounded-md h-full focus:outline-none scroll-none scrollbar-thin scrollbar-thumb-sky-900 scrollbar-track-gray-800"
           multiple={true}
-          size={1}
+          size={2}
           onChange={(event) => {
             setSelectedSymbol(event.target.value || null);
           }}
