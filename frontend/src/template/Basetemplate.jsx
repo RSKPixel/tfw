@@ -26,6 +26,11 @@ const Basetemplate = ({
           <span>
             <Link to="/intraday-signals">Intraday Signals</Link>
           </span>
+          <span>
+            <Link to="/intraday-donchian-signals">
+              Intraday Donchian Signals
+            </Link>
+          </span>
         </div>
       </div>
 

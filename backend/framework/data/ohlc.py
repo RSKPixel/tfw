@@ -169,6 +169,32 @@ def fetch_ta_data(symbol="", from_date="", to_date="", timeframe="1day", conn=No
         df["keltner_upper"] = df["sma_20"] + 1.5 * df["atr_20"]
         df["keltner_lower"] = df["sma_20"] - 1.5 * df["atr_20"]
 
+        length = 72
+        # --- Compute Donchian upper/lower bands ---
+        df['donchian_upper'] = df['close'].shift(1).rolling(length - 1).max()
+        df['donchian_lower'] = df['close'].shift(1).rolling(length - 1).min()
+
+        # --- Generate buy/sell crossover points ---
+        df['donchian_buy_signal'] = (df['close'] > df['donchian_upper']) & (
+            df['close'].shift(1) <= df['donchian_upper'].shift(1)
+        )
+        df['donchian_sell_signal'] = (df['close'] < df['donchian_lower']) & (
+            df['close'].shift(1) >= df['donchian_lower'].shift(1)
+        )
+
+        # # --- Generate buy/sell crossover points ---
+        # df['donchian_buy_signal'] = df['close'] > df['donchian_upper']
+        # df['donchian_sell_signal'] = df['close'] < df['donchian_lower']
+
+        # --- Create unified signal column ---
+        df['signal'] = 0
+        df.loc[df['donchian_buy_signal'], 'signal'] = 1
+        df.loc[df['donchian_sell_signal'], 'signal'] = -1
+
+        # # Optional: forward fill to keep position until reversed
+        # # (similar to Pine’s persistent `sig` variable)
+        # df['signal'] = df['signal'].replace(to_replace=0, method='ffill').fillna(0).astype(int)
+
         def in_squeeze(df):
             return df["bb_lower"] > df["keltner_lower"] and df["bb_upper"] < df["keltner_upper"]
 
@@ -182,6 +208,7 @@ def fetch_ta_data(symbol="", from_date="", to_date="", timeframe="1day", conn=No
 
         return json.loads(df.to_json(orient="records", date_format="iso"))
     except Exception as e:
+        print(e)
         return {"status": "error", "error": str(e)}
 
     finally:

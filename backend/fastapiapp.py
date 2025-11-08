@@ -2,7 +2,7 @@
 from fastapi import FastAPI, Request, responses
 from framework.data.ohlc import fetch_ohlc_data
 from framework.data.ohlc import fetch_ta_data, symbols
-from scanner import scan_intraday_signal
+from scanner import scan_intraday_signal, scan_donchian_signal
 from datetime import datetime
 
 import pandas as pd
@@ -74,6 +74,17 @@ async def scanner_intraday_signals():
     today = datetime.now().date()
     from_date = today - pd.Timedelta(days=30)
     buy_signals, sell_signals = scan_intraday_signal(
+        from_date=from_date, to_date=today, timeframe="15min", conn=conn
+    )
+    return {"status": "success", "buy_signals": buy_signals, "sell_signals": sell_signals}
+
+
+@app.get("/scanner/donchian-signals")
+async def scanner_donchian_symbols():
+    conn = config.db_conn()
+    today = datetime.now().date()
+    from_date = today - pd.Timedelta(days=60)
+    buy_signals, sell_signals = scan_donchian_signal(
         from_date=from_date, to_date=today, timeframe="15min", conn=conn
     )
     return {"status": "success", "buy_signals": buy_signals, "sell_signals": sell_signals}

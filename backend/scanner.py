@@ -168,11 +168,56 @@ def scan_intraday_signal(from_date="", to_date="", timeframe="15min", conn=None)
     return intraday_buy_symbols, intraday_sell_symbols
 
 
+def scan_donchian_signal(from_date="", to_date="", timeframe="15min", conn=None):
+    if conn is None or conn.closed:
+        return {"status": "error", "error": "Database connection is not provided."}
+
+    symbol_list = symbols(conn=conn)
+    total_symbols = len(symbol_list)
+    buy_signals = pd.DataFrame()
+    sell_signals = pd.DataFrame()
+
+    for idx, symbol in enumerate(symbol_list, start=1):
+        print(f"Scanning {idx}/{total_symbols} symbols...", end="\r", flush=True)
+        params = {
+            "symbol": symbol,
+            "from_date": from_date,
+            "to_date": to_date,
+            "timeframe": timeframe,
+            "conn": conn,
+        }
+        ta_data = fetch_ta_data(**params)
+
+        if isinstance(ta_data, dict) and ta_data.get("status") == "error":
+            continue
+
+        df = pd.DataFrame(ta_data)
+        unique_dates = pd.to_datetime(df["date"]).dt.date.unique()
+        latest_date = max(unique_dates)
+        df = df[pd.to_datetime(df["date"]).dt.date == latest_date]
+
+        signals = df[((df["signal"] == 1) | (df["signal"] == -1))]
+
+        for index, row in signals.iterrows():
+            signal = {
+                "symbol": symbol,
+                "date": pd.to_datetime(row["date"]).strftime("%d-%m-%Y %H:%M:%S"),
+                "buy_signal": float(row["donchian_upper"]) if row["signal"] == 1 else None,
+                "sell_signal": float(row["donchian_lower"]) if row["signal"] == -1 else None,
+            }
+            if row["signal"] == 1:
+                buy_signals = pd.concat([buy_signals, pd.DataFrame([signal])], ignore_index=True)
+            elif row["signal"] == -1:
+                sell_signals = pd.concat([sell_signals, pd.DataFrame([signal])], ignore_index=True)
+
+    return buy_signals.to_dict(orient="records"), sell_signals.to_dict(orient="records")
+
+
 def scan(notify_telegram=False):
     conn = config.db_conn()
     starttime = datetime.now()
     print("Starting intraday signal scan...")
-    buy_signals, sell_signals = scan_intraday_signal(
+    buy_signals, sell_signals = scan_donchian_signal(
         from_date="2025-10-01", to_date="2025-10-31", timeframe="15min", conn=conn
     )
     endtime = datetime.now()
@@ -233,7 +278,12 @@ if __name__ == "__main__":
 
     while True:
         os.system("cls" if os.name == "nt" else "clear")
-        scan(notify_telegram=False)
+        # scan(notify_telegram=False)
+        buy, sell = scan_donchian_signal(
+            from_date="2025-10-01", to_date="2025-11-07", timeframe="15min", conn=config.db_conn()
+        )
+
+        print(buy, sell)
         if not check_market_hours():
             break
 

@@ -5,6 +5,7 @@ import GlobalContext from "./template/GlobalContext";
 import { BrowserRouter as Router, Routes, Route, Link } from "react-router-dom";
 import Dashboard from "./pages/Dashboard";
 import IntradaySignals from "./pages/IntradaySignals";
+import IntradayDonSignals from "./pages/IntradayDonSignals";
 
 function App() {
   const api = import.meta.env.VITE_API_URL;
@@ -17,6 +18,10 @@ function App() {
           <Routes>
             <Route path="/" element={<Dashboard />} />
             <Route path="/intraday-signals" element={<IntradaySignals />} />
+            <Route
+              path="/intraday-donchian-signals"
+              element={<IntradayDonSignals />}
+            />
           </Routes>
         </Basetemplate>
       </GlobalContext.Provider>
