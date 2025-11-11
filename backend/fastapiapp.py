@@ -2,8 +2,9 @@
 from fastapi import FastAPI, Request, responses
 from framework.data.ohlc import fetch_ohlc_data
 from framework.data.ohlc import fetch_ta_data, symbols
+from framework.backfiller.core import api_request, instruments, store_data_non_orm
 from scanner import scan_intraday_signal, scan_donchian_signal
-from datetime import datetime
+from datetime import datetime, timedelta
 
 import pandas as pd
 import pytz
@@ -24,6 +25,7 @@ origins = [
 
 app = FastAPI()
 conn = config.db_conn()
+kite = config.kite_connect()
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,  # your frontend URLs
@@ -31,6 +33,28 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+@app.get("/kite/daily")
+async def kite_daily(request: Request):
+    from_date = datetime.now().date() - timedelta(days=10)
+    to_date = datetime.now().date() - timedelta(days=0)
+
+    instruments_list, current_expiry, previous_expiry = instruments(exchange="NFO")
+    complete_data = api_request(
+        api=kite,
+        instrument_list=instruments_list,
+        from_date=from_date,
+        to_date=to_date,
+        interval="day",
+    )
+
+    data = {'idata_1day': complete_data}
+    store_data_non_orm(data, conn)
+
+    return responses.JSONResponse(
+        content={"status": "success", "data": ["idata_1day stored successfully"]}
+    )
 
 
 @app.get("/ohlc")

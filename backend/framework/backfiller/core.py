@@ -20,6 +20,7 @@ from decimal import Decimal, ROUND_HALF_UP
 import psycopg2
 from psycopg2.extras import execute_values
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from kiteconnect import KiteConnect
 
 console = Console()
 
@@ -89,6 +90,12 @@ def store_data_non_orm(resampled_data, conn):
         if df.empty:
             continue
 
+        if df.duplicated(subset=["date", "symbol"]).any():
+            console.print(
+                f"[yellow]Warning: Found duplicate date/symbol in {key}, dropping duplicates.[/yellow]"
+            )
+
+        df = df.drop_duplicates(subset=["date", "symbol"], keep="last")
         df.reset_index(inplace=True)
 
         records = [
@@ -121,8 +128,6 @@ def store_data_non_orm(resampled_data, conn):
         except Exception as e:
             console.print(f"[red]Error inserting data into {key}: {e}[/red]")
 
-    # cursor.close()
-    # conn.close()
     end_time = time.time()
     console.print(f"[green]Data storage completed in {end_time - start_time:.2f}s[/green]")
 
@@ -244,7 +249,7 @@ def resample_data_multithread(complete_data: pd.DataFrame, interval: str):
         return resampled_data
 
 
-def api_request(api, instrument_list, from_date, to_date, interval):
+def api_request(api: KiteConnect, instrument_list, from_date, to_date, interval):
     req_start = time.time()
     request_count = 0
     complete_data = pd.DataFrame()
@@ -278,6 +283,7 @@ def api_request(api, instrument_list, from_date, to_date, interval):
                         from_date=from_date,
                         to_date=to_date,
                         interval=interval,
+                        continuous=True if interval == 'day' else False,
                     )
 
                     api_log.append({"instrument": instrument["tradingsymbol"], "data": len(data)})
@@ -285,6 +291,9 @@ def api_request(api, instrument_list, from_date, to_date, interval):
                     request_count += 1
                     if len(data) != 0:
                         data = pd.DataFrame(data)
+                        if interval == 'day':
+                            data["date"] = pd.to_datetime(data["date"]).dt.strftime("%Y-%m-%d")
+
                         data['symbol'] = instrument['name'] + '-I'
                         data["tradingsymbol"] = instrument['tradingsymbol']
                         data['open'] = data['open'].astype(float).round(2)
